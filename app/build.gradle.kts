@@ -1,12 +1,16 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+
+    id(
+        "org.jetbrains.kotlin.plugin.serialization"
+    ) version "2.2.10"
 }
 
 android {
     namespace = "com.example.githubdemo"
     compileSdk {
-        version = release(36) {
+        version = release(37) {
             minorApiLevel = 1
         }
     }
@@ -38,8 +42,39 @@ android {
 }
 
 dependencies {
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.navigation:navigation-compose:2.9.8")
+    implementation(
+        "androidx.compose.material:material-icons-extended"
+    )
+
+    implementation(
+        "androidx.navigation:navigation-compose:2.9.8"
+    )
+
+    implementation(
+        "androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0"
+    )
+
+    implementation(
+        "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2"
+    )
+
+    implementation(
+        "io.ktor:ktor-client-android:3.2.2"
+    )
+
+    implementation(
+        platform(
+            "io.github.jan-tennert.supabase:bom:3.2.2"
+        )
+    )
+
+    implementation(
+        "io.github.jan-tennert.supabase:auth-kt"
+    )
+
+    implementation(
+        "io.github.jan-tennert.supabase:postgrest-kt"
+    )
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

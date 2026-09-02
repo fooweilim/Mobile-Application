@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -16,20 +18,21 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.githubdemo.data.AppData
-import com.example.githubdemo.data.RoleStorage
 import com.example.githubdemo.data.UserRole
+import com.example.githubdemo.data.local.LocalAccountStorage
 import com.example.githubdemo.screen.AdminDashboardScreen
 import com.example.githubdemo.screen.AppBottomNavigationBar
 import com.example.githubdemo.screen.FarmerDashboardScreen
-import com.example.githubdemo.screen.FarmerSignUpScreen
 import com.example.githubdemo.screen.FoodBoxScreen
 import com.example.githubdemo.screen.HomeScreen
-import com.example.githubdemo.screen.LoginScreen
 import com.example.githubdemo.screen.MarketScreen
 import com.example.githubdemo.screen.MealsScreen
-import com.example.githubdemo.screen.ProfileScreen
 import com.example.githubdemo.screen.RoleSelectionScreen
-import com.example.githubdemo.screen.SignUpScreen
+import com.example.githubdemo.screen.authentication.FarmerSignUpScreen
+import com.example.githubdemo.screen.authentication.LoginScreen
+import com.example.githubdemo.screen.authentication.SignUpScreen
+import com.example.githubdemo.screen.userprofile.ProfileScreen
+import com.example.githubdemo.viewmodel.authentication.AuthViewModel
 
 @Composable
 fun AppNavGraph(
@@ -38,20 +41,23 @@ fun AppNavGraph(
 ) {
     val context = LocalContext.current
 
+    val authViewModel: AuthViewModel =
+        viewModel()
+
     /*
-     * Load the previously selected
-     * and logged-in role.
+     * Check local storage.
+     *
+     * If a user has already logged in, the app
+     * opens the correct dashboard.
+     *
+     * Otherwise, the role selection screen opens.
      */
     val savedRole = remember {
-        RoleStorage.getSelectedRole(
+        LocalAccountStorage.getSelectedRole(
             context
         )
     }
 
-    /*
-     * If no role was saved, start from
-     * the role selection screen.
-     */
     val startDestination =
         if (savedRole == null) {
             AppData.ROLE_SELECTION_ROUTE
@@ -71,8 +77,15 @@ fun AppNavGraph(
             ?.route
 
     /*
-     * The bottom navigation is shown
-     * only on Buyer pages.
+     * The buyer bottom navigation only appears
+     * on buyer pages.
+     *
+     * It does not appear on:
+     * - role selection
+     * - login
+     * - signup
+     * - farmer dashboard
+     * - admin dashboard
      */
     val showBottomNavigation =
         AppData.buyerRoutes.contains(
@@ -80,41 +93,38 @@ fun AppNavGraph(
         )
 
     /*
-     * Navigation used by the Buyer,
-     * Farmer and Admin pages.
+     * Used by Home, Market, Food Box,
+     * Meals and Profile screens.
      */
-    val onPageNavigate:
-                (String) -> Unit = { route ->
+    val onPageNavigate: (String) -> Unit = {
+            route ->
 
         if (
             route ==
             AppData.ROLE_SELECTION_ROUTE
         ) {
             /*
-             * Clear the logged-in role
-             * when Change Role is selected.
+             * When the user presses Logout,
+             * sign out from Supabase and clear
+             * the local account information.
              */
-            RoleStorage.clearSelectedRole(
-                context
-            )
-
-            navController.navigate(
-                AppData.ROLE_SELECTION_ROUTE
-            ) {
-                popUpTo(
-                    navController
-                        .graph
-                        .startDestinationId
+            authViewModel.signOut {
+                navController.navigate(
+                    AppData.ROLE_SELECTION_ROUTE
                 ) {
-                    inclusive = true
-                }
+                    popUpTo(
+                        navController
+                            .graph
+                            .startDestinationId
+                    ) {
+                        inclusive = true
+                    }
 
-                launchSingleTop = true
+                    launchSingleTop = true
+                }
             }
         } else {
-            navController.navigate(
-                route
-            ) {
+            navController.navigate(route) {
                 launchSingleTop = true
             }
         }
@@ -126,11 +136,9 @@ fun AppNavGraph(
         bottomBar = {
             if (showBottomNavigation) {
                 AppBottomNavigationBar(
-                    currentRoute =
-                        currentRoute,
+                    currentRoute = currentRoute,
 
                     onItemClick = { route ->
-
                         navController.navigate(
                             route
                         ) {
@@ -140,11 +148,8 @@ fun AppNavGraph(
                                 saveState = true
                             }
 
-                            launchSingleTop =
-                                true
-
-                            restoreState =
-                                true
+                            launchSingleTop = true
+                            restoreState = true
                         }
                     }
                 )
@@ -153,52 +158,45 @@ fun AppNavGraph(
     ) { innerPadding ->
 
         NavHost(
-            navController =
-                navController,
-
-            startDestination =
-                startDestination,
+            navController = navController,
+            startDestination = startDestination,
 
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-
             /*
-             * ROLE SELECTION SCREEN
+             * Role selection
              */
             composable(
-                AppData.ROLE_SELECTION_ROUTE
+                route =
+                    AppData.ROLE_SELECTION_ROUTE
             ) {
                 RoleSelectionScreen(
                     onRoleSelected = {
                             selectedRole ->
 
-                        /*
-                         * All three roles first
-                         * navigate to Login.
-                         */
                         navController.navigate(
                             AppData.getLoginRoute(
                                 selectedRole
                             )
                         ) {
-                            launchSingleTop =
-                                true
+                            launchSingleTop = true
                         }
                     }
                 )
             }
 
             /*
-             * LOGIN SCREEN
+             * Login route
              *
-             * Buyer, Farmer and Admin
-             * can open this screen.
+             * Example routes:
+             * login/buyer
+             * login/farmer
+             * login/admin
              */
             composable(
-                route =
-                    AppData.LOGIN_ROUTE,
+                route = AppData.LOGIN_ROUTE,
 
                 arguments = listOf(
                     navArgument("role") {
@@ -222,26 +220,9 @@ fun AppNavGraph(
                     LoginScreen(
                         userRole = userRole,
 
-                        /*
-                         * Save the role only after
-                         * the login is successful.
-                         */
                         onLoginSuccess = {
                                 loggedInRole ->
 
-                            RoleStorage
-                                .saveSelectedRole(
-                                    context =
-                                        context,
-
-                                    userRole =
-                                        loggedInRole
-                                )
-
-                            /*
-                             * Open the correct page
-                             * according to the role.
-                             */
                             navController.navigate(
                                 AppData
                                     .getRoleDestination(
@@ -249,35 +230,30 @@ fun AppNavGraph(
                                     )
                             ) {
                                 /*
-                                 * Remove Role Selection
-                                 * and Login from the stack.
+                                 * Remove login and role
+                                 * selection after login.
                                  */
                                 popUpTo(
                                     AppData
                                         .ROLE_SELECTION_ROUTE
                                 ) {
-                                    inclusive =
-                                        true
+                                    inclusive = true
                                 }
 
-                                launchSingleTop =
-                                    true
+                                launchSingleTop = true
                             }
                         },
 
-                        /*
-                         * Buyer and Farmer can
-                         * navigate to Sign Up.
-                         *
-                         * Admin cannot Sign Up.
-                         */
                         onSignUpClick = {
                                 signUpRole ->
 
+                            /*
+                             * Admin is not allowed
+                             * to create an account.
+                             */
                             if (
-                                UserRole.canSignUp(
-                                    signUpRole
-                                )
+                                signUpRole !=
+                                UserRole.ADMIN
                             ) {
                                 navController.navigate(
                                     AppData
@@ -285,30 +261,43 @@ fun AppNavGraph(
                                             signUpRole
                                         )
                                 )
+                            } else {
+                                authViewModel
+                                    .showErrorMessage(
+                                        "Admin accounts cannot sign up."
+                                    )
                             }
                         },
 
-                        /*
-                         * Return to Role Selection.
-                         */
                         onBackClick = {
+                            authViewModel
+                                .clearMessage()
+
                             navController
                                 .popBackStack()
-                        }
+                        },
+
+                        authViewModel =
+                            authViewModel
                     )
                 }
             }
 
             /*
-             * SIGN-UP ROUTE
+             * Signup route
              *
-             * Buyer uses SignUpScreen.
-             * Farmer uses FarmerSignUpScreen.
-             * Admin is not included.
+             * Buyer:
+             * Uses the normal SignUpScreen.
+             *
+             * Farmer:
+             * Uses the four-step
+             * FarmerSignUpScreen.
+             *
+             * Admin:
+             * Cannot access signup.
              */
             composable(
-                route =
-                    AppData.SIGN_UP_ROUTE,
+                route = AppData.SIGN_UP_ROUTE,
 
                 arguments = listOf(
                     navArgument("role") {
@@ -324,107 +313,94 @@ fun AppNavGraph(
                         ?.getString("role")
 
                 when (userRole) {
-
-                    /*
-                     * BUYER SIGN UP
-                     */
                     UserRole.BUYER -> {
                         SignUpScreen(
                             userRole =
                                 UserRole.BUYER,
 
-                            /*
-                             * Return to Buyer Login
-                             * after successful Sign Up.
-                             */
                             onSignUpSuccess = {
+                                authViewModel
+                                    .clearMessage()
+
                                 navController
                                     .popBackStack()
                             },
 
-                            /*
-                             * Sign In text returns
-                             * to Buyer Login.
-                             */
                             onLoginClick = {
+                                authViewModel
+                                    .clearMessage()
+
                                 navController
                                     .popBackStack()
                             },
 
-                            /*
-                             * Back arrow returns
-                             * to Buyer Login.
-                             */
                             onBackClick = {
+                                authViewModel
+                                    .clearMessage()
+
                                 navController
                                     .popBackStack()
-                            }
+                            },
+
+                            authViewModel =
+                                authViewModel
                         )
                     }
 
-                    /*
-                     * FARMER SIGN UP
-                     *
-                     * This opens the four-step
-                     * Farmer registration:
-                     *
-                     * 1. Account
-                     * 2. Farm Info
-                     * 3. Documents
-                     * 4. Review
-                     */
                     UserRole.FARMER -> {
                         FarmerSignUpScreen(
-
-                            /*
-                             * After the Farmer submits
-                             * the registration, return
-                             * to Farmer Login.
-                             */
                             onSignUpSuccess = {
+                                authViewModel
+                                    .clearMessage()
+
                                 navController
                                     .popBackStack()
                             },
 
-                            /*
-                             * Sign In text returns
-                             * to Farmer Login.
-                             */
                             onLoginClick = {
+                                authViewModel
+                                    .clearMessage()
+
                                 navController
                                     .popBackStack()
                             },
 
-                            /*
-                             * On the first registration
-                             * step, the back arrow returns
-                             * to Farmer Login.
-                             *
-                             * On later steps, the screen
-                             * itself returns to the
-                             * previous registration step.
-                             */
                             onBackClick = {
+                                authViewModel
+                                    .clearMessage()
+
                                 navController
                                     .popBackStack()
-                            }
+                            },
+
+                            authViewModel =
+                                authViewModel
                         )
                     }
 
                     /*
-                     * There is intentionally no
-                     * UserRole.ADMIN section.
-                     *
-                     * Admin cannot Sign Up.
+                     * Admin and invalid roles are
+                     * sent back to the previous page.
                      */
+                    else -> {
+                        LaunchedEffect(userRole) {
+                            authViewModel
+                                .showErrorMessage(
+                                    "Admin accounts cannot sign up."
+                                )
+
+                            navController
+                                .popBackStack()
+                        }
+                    }
                 }
             }
 
             /*
-             * BUYER HOME
+             * Buyer Home
              */
             composable(
-                AppData.HOME_ROUTE
+                route = AppData.HOME_ROUTE
             ) {
                 HomeScreen(
                     onNavigate =
@@ -433,10 +409,10 @@ fun AppNavGraph(
             }
 
             /*
-             * BUYER MARKET
+             * Buyer Market
              */
             composable(
-                AppData.MARKET_ROUTE
+                route = AppData.MARKET_ROUTE
             ) {
                 MarketScreen(
                     onNavigate =
@@ -445,10 +421,11 @@ fun AppNavGraph(
             }
 
             /*
-             * BUYER FOOD BOX
+             * Buyer Food Box
              */
             composable(
-                AppData.FOOD_BOX_ROUTE
+                route =
+                    AppData.FOOD_BOX_ROUTE
             ) {
                 FoodBoxScreen(
                     onNavigate =
@@ -457,10 +434,10 @@ fun AppNavGraph(
             }
 
             /*
-             * BUYER MEALS
+             * Buyer Meals
              */
             composable(
-                AppData.MEALS_ROUTE
+                route = AppData.MEALS_ROUTE
             ) {
                 MealsScreen(
                     onNavigate =
@@ -469,10 +446,10 @@ fun AppNavGraph(
             }
 
             /*
-             * BUYER PROFILE
+             * Buyer Profile
              */
             composable(
-                AppData.PROFILE_ROUTE
+                route = AppData.PROFILE_ROUTE
             ) {
                 ProfileScreen(
                     onNavigate =
@@ -481,10 +458,10 @@ fun AppNavGraph(
             }
 
             /*
-             * FARMER DASHBOARD
+             * Farmer Dashboard
              */
             composable(
-                AppData.FARMER_ROUTE
+                route = AppData.FARMER_ROUTE
             ) {
                 FarmerDashboardScreen(
                     onNavigate =
@@ -493,10 +470,10 @@ fun AppNavGraph(
             }
 
             /*
-             * ADMIN DASHBOARD
+             * Admin Dashboard
              */
             composable(
-                AppData.ADMIN_ROUTE
+                route = AppData.ADMIN_ROUTE
             ) {
                 AdminDashboardScreen(
                     onNavigate =

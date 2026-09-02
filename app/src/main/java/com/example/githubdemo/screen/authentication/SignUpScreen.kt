@@ -1,4 +1,4 @@
-package com.example.githubdemo.screen
+package com.example.githubdemo.screen.authentication
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -38,25 +38,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.githubdemo.data.AccountStorage
 import com.example.githubdemo.data.AuthValidation
 import com.example.githubdemo.data.UserRole
-import com.example.githubdemo.model.UserAccount
-import com.example.githubdemo.ui.theme.GithubDemoTheme
 import com.example.githubdemo.ui.theme.MainText
 import com.example.githubdemo.ui.theme.PageBackground
 import com.example.githubdemo.ui.theme.PrimaryGreen
 import com.example.githubdemo.ui.theme.SecondaryText
+import com.example.githubdemo.viewmodel.authentication.AuthViewModel
 
 @Composable
 fun SignUpScreen(
     userRole: String,
     onSignUpSuccess: (String) -> Unit,
     onLoginClick: (String) -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    authViewModel: AuthViewModel
 ) {
     val context = LocalContext.current
 
@@ -72,8 +70,7 @@ fun SignUpScreen(
         mutableStateOf("")
     }
 
-    var additionalInformation by
-    rememberSaveable {
+    var additionalInformation by rememberSaveable {
         mutableStateOf("")
     }
 
@@ -89,8 +86,7 @@ fun SignUpScreen(
         mutableStateOf(false)
     }
 
-    var confirmPasswordVisible by
-    rememberSaveable {
+    var confirmPasswordVisible by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -98,8 +94,8 @@ fun SignUpScreen(
         mutableStateOf(false)
     }
 
-    var signUpMessage by rememberSaveable {
-        mutableStateOf("")
+    var showOtpDialog by rememberSaveable {
+        mutableStateOf(false)
     }
 
     val roleName =
@@ -124,10 +120,9 @@ fun SignUpScreen(
 
     val phoneError =
         formSubmitted &&
-                !AuthValidation
-                    .isValidPhoneNumber(
-                        phoneNumber
-                    )
+                !AuthValidation.isValidPhoneNumber(
+                    phoneNumber
+                )
 
     val additionalInformationError =
         formSubmitted &&
@@ -153,8 +148,11 @@ fun SignUpScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(PageBackground),
-        contentPadding =
-            PaddingValues(bottom = 36.dp),
+
+        contentPadding = PaddingValues(
+            bottom = 36.dp
+        ),
+
         horizontalAlignment =
             Alignment.CenterHorizontally
     ) {
@@ -169,7 +167,10 @@ fun SignUpScreen(
                     title = "Create account",
                     subtitle =
                         "Join HarvestLink as a $roleName",
-                    onBackClick = onBackClick
+                    onBackClick = {
+                        authViewModel.clearMessage()
+                        onBackClick()
+                    }
                 )
 
                 Card(
@@ -180,13 +181,17 @@ fun SignUpScreen(
                             top = 350.dp,
                             end = 24.dp
                         ),
-                    shape =
-                        RoundedCornerShape(30.dp),
+
+                    shape = RoundedCornerShape(
+                        30.dp
+                    ),
+
                     colors =
                         CardDefaults.cardColors(
                             containerColor =
                                 Color.White
                         ),
+
                     elevation =
                         CardDefaults.cardElevation(
                             defaultElevation = 4.dp
@@ -196,6 +201,7 @@ fun SignUpScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(28.dp),
+
                         verticalArrangement =
                             Arrangement.spacedBy(
                                 18.dp
@@ -203,48 +209,69 @@ fun SignUpScreen(
                     ) {
                         AuthenticationTextField(
                             value = fullName,
+
                             onValueChange = {
                                 fullName =
                                     it.take(50)
 
-                                signUpMessage = ""
+                                authViewModel
+                                    .clearMessage()
                             },
+
                             label = "Full Name",
+
                             placeholder =
                                 "Enter your full name",
+
                             leadingIcon =
                                 Icons.Outlined.Person,
+
                             isError = nameError,
+
                             errorMessage =
                                 "Enter at least 2 characters.",
+
                             keyboardType =
                                 KeyboardType.Text,
+
                             imeAction =
                                 ImeAction.Next
                         )
 
                         AuthenticationTextField(
                             value = email,
+
                             onValueChange = {
                                 email = it.take(60)
-                                signUpMessage = ""
+
+                                authViewModel
+                                    .clearMessage()
                             },
-                            label = "Email Address",
+
+                            label =
+                                "Email Address",
+
                             placeholder =
                                 "$userRole@email.com",
+
                             leadingIcon =
                                 Icons.Outlined.Email,
+
                             isError = emailError,
+
                             errorMessage =
                                 "Enter a valid email address.",
+
                             keyboardType =
                                 KeyboardType.Email,
+
                             imeAction =
                                 ImeAction.Next
                         )
 
                         AuthenticationTextField(
                             value = phoneNumber,
+
                             onValueChange = {
                                     newPhoneNumber ->
 
@@ -254,6 +281,7 @@ fun SignUpScreen(
                                     newPhoneNumber
                                         .all {
                                                 character ->
+
                                             character
                                                 .isDigit()
                                         }
@@ -261,19 +289,28 @@ fun SignUpScreen(
                                     phoneNumber =
                                         newPhoneNumber
 
-                                    signUpMessage = ""
+                                    authViewModel
+                                        .clearMessage()
                                 }
                             },
-                            label = "Phone Number",
+
+                            label =
+                                "Phone Number",
+
                             placeholder =
                                 "0123456789",
+
                             leadingIcon =
                                 Icons.Outlined.Phone,
+
                             isError = phoneError,
+
                             errorMessage =
                                 "Enter 9 to 12 numbers.",
+
                             keyboardType =
                                 KeyboardType.Phone,
+
                             imeAction =
                                 ImeAction.Next
                         )
@@ -281,51 +318,73 @@ fun SignUpScreen(
                         AuthenticationTextField(
                             value =
                                 additionalInformation,
+
                             onValueChange = {
                                 additionalInformation =
                                     it.take(100)
 
-                                signUpMessage = ""
+                                authViewModel
+                                    .clearMessage()
                             },
+
                             label =
                                 additionalFieldLabel,
+
                             placeholder =
                                 "Enter $additionalFieldLabel",
+
                             leadingIcon =
                                 Icons.Outlined.Info,
+
                             isError =
                                 additionalInformationError,
+
                             errorMessage =
                                 "$additionalFieldLabel is required.",
+
                             keyboardType =
                                 KeyboardType.Text,
+
                             imeAction =
                                 ImeAction.Next
                         )
 
                         AuthenticationTextField(
                             value = password,
+
                             onValueChange = {
                                 password =
                                     it.take(30)
 
-                                signUpMessage = ""
+                                authViewModel
+                                    .clearMessage()
                             },
+
                             label = "Password",
+
                             placeholder =
                                 "Create a password",
+
                             leadingIcon =
                                 Icons.Outlined.Lock,
-                            isError = passwordError,
+
+                            isError =
+                                passwordError,
+
                             errorMessage =
-                                "Use at least 6 characters, one letter and one number.",
+                                "Use at least 8 characters, one letter and one number.",
+
                             keyboardType =
                                 KeyboardType.Password,
+
                             imeAction =
                                 ImeAction.Next,
+
                             isPassword = true,
+
                             passwordVisible =
                                 passwordVisible,
+
                             onPasswordVisibilityChange = {
                                 passwordVisible =
                                     !passwordVisible
@@ -335,29 +394,41 @@ fun SignUpScreen(
                         AuthenticationTextField(
                             value =
                                 confirmPassword,
+
                             onValueChange = {
                                 confirmPassword =
                                     it.take(30)
 
-                                signUpMessage = ""
+                                authViewModel
+                                    .clearMessage()
                             },
+
                             label =
                                 "Confirm Password",
+
                             placeholder =
                                 "Enter the password again",
+
                             leadingIcon =
                                 Icons.Outlined.Lock,
+
                             isError =
                                 confirmPasswordError,
+
                             errorMessage =
                                 "Passwords do not match.",
+
                             keyboardType =
                                 KeyboardType.Password,
+
                             imeAction =
                                 ImeAction.Done,
+
                             isPassword = true,
+
                             passwordVisible =
                                 confirmPasswordVisible,
+
                             onPasswordVisibilityChange = {
                                 confirmPasswordVisible =
                                     !confirmPasswordVisible
@@ -365,33 +436,33 @@ fun SignUpScreen(
                         )
 
                         if (
-                            userRole ==
-                            UserRole.FARMER
-                        ) {
-                            Text(
-                                text =
-                                    "Farmer accounts require identity and farm verification after registration.",
-                                modifier =
-                                    Modifier.fillMaxWidth(),
-                                color =
-                                    SecondaryText,
-                                fontSize = 13.sp,
-                                lineHeight = 18.sp
-                            )
-                        }
-
-                        if (
-                            signUpMessage
+                            authViewModel
+                                .message
                                 .isNotEmpty()
                         ) {
                             Text(
                                 text =
-                                    signUpMessage,
+                                    authViewModel
+                                        .message,
+
                                 modifier =
-                                    Modifier.fillMaxWidth(),
+                                    Modifier
+                                        .fillMaxWidth(),
+
                                 color =
-                                    Color(0xFFB3261E),
+                                    if (
+                                        authViewModel
+                                            .messageIsError
+                                    ) {
+                                        Color(
+                                            0xFFB3261E
+                                        )
+                                    } else {
+                                        PrimaryGreen
+                                    },
+
                                 fontSize = 14.sp,
+
                                 textAlign =
                                     TextAlign.Center
                             )
@@ -399,8 +470,11 @@ fun SignUpScreen(
 
                         Button(
                             onClick = {
-                                formSubmitted = true
-                                signUpMessage = ""
+                                formSubmitted =
+                                    true
+
+                                authViewModel
+                                    .clearMessage()
 
                                 val formIsValid =
                                     AuthValidation
@@ -430,70 +504,61 @@ fun SignUpScreen(
                                                 )
 
                                 if (formIsValid) {
-                                    val userAccount =
-                                        UserAccount(
-                                            userRole =
-                                                userRole,
-                                            fullName =
-                                                fullName.trim(),
+                                    authViewModel
+                                        .sendSignUpOtp(
                                             email =
-                                                email.trim(),
-                                            phoneNumber =
-                                                phoneNumber.trim(),
-                                            additionalInformation =
-                                                additionalInformation.trim(),
+                                                email,
+
                                             password =
-                                                password
+                                                password,
+
+                                            onOtpSent = {
+                                                showOtpDialog =
+                                                    true
+                                            }
                                         )
-
-                                    val accountSaved =
-                                        AccountStorage
-                                            .saveAccount(
-                                                context =
-                                                    context,
-                                                userAccount =
-                                                    userAccount
-                                            )
-
-                                    if (
-                                        accountSaved
-                                    ) {
-                                        Toast.makeText(
-                                            context,
-                                            "Account created successfully.",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-
-                                        onSignUpSuccess(
-                                            userRole
-                                        )
-                                    } else {
-                                        signUpMessage =
-                                            "This email is already registered as a $roleName."
-                                    }
                                 }
                             },
+
+                            enabled =
+                                !authViewModel
+                                    .isLoading,
+
                             modifier =
-                                Modifier.fillMaxWidth(),
+                                Modifier
+                                    .fillMaxWidth(),
+
                             shape =
                                 RoundedCornerShape(
                                     18.dp
                                 ),
+
                             colors =
                                 ButtonDefaults
                                     .buttonColors(
                                         containerColor =
                                             PrimaryGreen
                                     ),
+
                             contentPadding =
                                 PaddingValues(
-                                    vertical = 16.dp
+                                    vertical =
+                                        16.dp
                                 )
                         ) {
                             Text(
                                 text =
-                                    "Create Account",
+                                    if (
+                                        authViewModel
+                                            .isLoading
+                                    ) {
+                                        "Sending OTP..."
+                                    } else {
+                                        "Create Account"
+                                    },
+
                                 fontSize = 18.sp,
+
                                 fontWeight =
                                     FontWeight.Bold
                             )
@@ -513,27 +578,37 @@ fun SignUpScreen(
                         top = 30.dp,
                         end = 24.dp
                     ),
+
                 horizontalArrangement =
                     Arrangement.Center,
+
                 verticalAlignment =
                     Alignment.CenterVertically
             ) {
                 Text(
                     text =
                         "Already have an account?",
+
                     color = SecondaryText,
+
                     fontSize = 15.sp
                 )
 
                 TextButton(
                     onClick = {
+                        authViewModel
+                            .clearMessage()
+
                         onLoginClick(userRole)
                     }
                 ) {
                     Text(
                         text = "Sign In",
+
                         color = MainText,
+
                         fontSize = 16.sp,
+
                         fontWeight =
                             FontWeight.Bold
                     )
@@ -541,24 +616,65 @@ fun SignUpScreen(
             }
         }
     }
-}
 
-@Preview(
-    showBackground = true,
-    widthDp = 412,
-    heightDp = 915
-)
-@Composable
-fun FarmerSignUpScreenPreview() {
-    GithubDemoTheme(
-        darkTheme = false,
-        dynamicColor = false
-    ) {
-        SignUpScreen(
-            userRole = UserRole.FARMER,
-            onSignUpSuccess = {},
-            onLoginClick = {},
-            onBackClick = {}
+    if (showOtpDialog) {
+        EmailOtpDialog(
+            email =
+                email
+                    .trim()
+                    .lowercase(),
+
+            authViewModel =
+                authViewModel,
+
+            onVerifyOtp = {
+                    enteredOtp ->
+
+                authViewModel
+                    .verifySignUpOtpAndSaveProfile(
+                        email = email,
+
+                        otp = enteredOtp,
+
+                        userRole = userRole,
+
+                        fullName = fullName,
+
+                        phoneNumber =
+                            phoneNumber,
+
+                        additionalInformation =
+                            additionalInformation,
+
+                        onSuccess = {
+                            showOtpDialog =
+                                false
+
+                            Toast.makeText(
+                                context,
+
+                                "Email verified. Account created in Supabase.",
+
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            onSignUpSuccess(
+                                userRole
+                            )
+                        }
+                    )
+            },
+
+            onResendOtp = {
+                authViewModel
+                    .resendSignUpOtp(
+                        email = email
+                    )
+            },
+
+            onDismiss = {
+                showOtpDialog = false
+            }
         )
     }
 }
