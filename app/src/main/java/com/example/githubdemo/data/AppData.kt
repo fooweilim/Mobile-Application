@@ -26,16 +26,44 @@ import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Storefront
 import com.example.githubdemo.model.BottomNavItem
+import com.example.githubdemo.model.PageContent
 import com.example.githubdemo.model.PageFeature
 
 object AppData {
+    val ROLE_SELECTION_ROUTE =
+        "role_selection"
 
-    // Navigation route names
-    const val HOME_ROUTE = "home"
-    const val MARKET_ROUTE = "market"
-    const val FOOD_BOX_ROUTE = "food_box"
-    const val MEALS_ROUTE = "meals"
-    const val PROFILE_ROUTE = "profile"
+    val HOME_ROUTE =
+        "home"
+
+    val MARKET_ROUTE =
+        "market"
+
+    val FOOD_BOX_ROUTE =
+        "food_box"
+
+    val MEALS_ROUTE =
+        "meals"
+
+    val PROFILE_ROUTE =
+        "profile"
+
+    val FARMER_ROUTE =
+        "farmer_dashboard"
+
+    val ADMIN_ROUTE =
+        "admin_dashboard"
+
+    val LOGIN_ROUTE = "login/{role}"
+    val SIGN_UP_ROUTE = "sign_up/{role}"
+
+    val buyerRoutes = listOf(
+        HOME_ROUTE,
+        MARKET_ROUTE,
+        FOOD_BOX_ROUTE,
+        MEALS_ROUTE,
+        PROFILE_ROUTE
+    )
 
     val bottomNavigationItems = listOf(
         BottomNavItem(
@@ -186,6 +214,188 @@ object AppData {
             description =
                 "Manage your personal details and preferences.",
             icon = Icons.Outlined.Settings
+        ),
+
+        PageFeature(
+            title = "Change Role",
+            description =
+                "Return to the role selection page.",
+            icon = Icons.Outlined.Home,
+            route = ROLE_SELECTION_ROUTE
         )
     )
+
+    val farmerFeatures = listOf(
+        PageFeature(
+            title = "Manage Products",
+            description =
+                "Add and update farm products for buyers.",
+            icon = Icons.Outlined.Eco
+        ),
+
+        PageFeature(
+            title = "Manage Orders",
+            description =
+                "View and prepare customer orders.",
+            icon = Icons.Outlined.ReceiptLong
+        ),
+
+        PageFeature(
+            title = "Farm Verification",
+            description =
+                "Check identity and farm document status.",
+            icon = Icons.Outlined.HealthAndSafety
+        ),
+
+        PageFeature(
+            title = "Change Role",
+            description =
+                "Return to the role selection page.",
+            icon = Icons.Outlined.Home,
+            route = ROLE_SELECTION_ROUTE
+        )
+    )
+
+    val adminFeatures = listOf(
+        PageFeature(
+            title = "Manage Users",
+            description =
+                "Review buyer and farmer accounts.",
+            icon = Icons.Outlined.Person
+        ),
+
+        PageFeature(
+            title = "Manage Farmers",
+            description =
+                "Review farmer verification information.",
+            icon = Icons.Outlined.Eco
+        ),
+
+        PageFeature(
+            title = "Manage Orders",
+            description =
+                "Monitor orders placed on the platform.",
+            icon = Icons.Outlined.ReceiptLong
+        ),
+
+        PageFeature(
+            title = "Platform Settings",
+            description =
+                "Manage general platform preferences.",
+            icon = Icons.Outlined.Settings
+        ),
+
+        PageFeature(
+            title = "Change Role",
+            description =
+                "Return to the role selection page.",
+            icon = Icons.Outlined.Home,
+            route = ROLE_SELECTION_ROUTE
+        )
+    )
+
+    val homePageContent = PageContent(
+        eyebrow = "Good morning 👋",
+        title = "Siti Aminah",
+        subtitle = "Kuala Lumpur, 50450",
+        searchPlaceholder =
+            "Search fresh produce...",
+        sectionTitle = "Quick Access",
+        features = homeFeatures
+    )
+
+    val marketPageContent = PageContent(
+        eyebrow = "Fresh and affordable",
+        title = "Market",
+        subtitle =
+            "Choose quality produce from nearby sellers.",
+        searchPlaceholder =
+            "Search products or categories...",
+        sectionTitle = "Browse Market",
+        features = marketFeatures
+    )
+
+    val foodBoxPageContent = PageContent(
+        eyebrow = "Weekly value bundles",
+        title = "Food Box",
+        subtitle =
+            "Subscribe to a box that fits your lifestyle.",
+        searchPlaceholder =
+            "Search food boxes...",
+        sectionTitle = "Choose Your Box",
+        features = foodBoxFeatures
+    )
+
+    val mealsPageContent = PageContent(
+        eyebrow = "Cook with less waste",
+        title = "Meals",
+        subtitle =
+            "Simple recipes using affordable ingredients.",
+        searchPlaceholder =
+            "Search recipes or ingredients...",
+        sectionTitle = "Meal Ideas",
+        features = mealFeatures
+    )
+
+    val profilePageContent = PageContent(
+        eyebrow = "Welcome back",
+        title = "My Profile",
+        subtitle =
+            "Siti Aminah • Kuala Lumpur",
+        searchPlaceholder =
+            "Search profile options...",
+        sectionTitle = "My Account",
+        features = profileFeatures
+    )
+
+    val farmerPageContent = PageContent(
+        eyebrow = "Sell directly to families",
+        title = "Farmer Dashboard",
+        subtitle =
+            "Manage products, verification, and customer orders.",
+        searchPlaceholder =
+            "Search farmer options...",
+        sectionTitle = "Farmer Management",
+        features = farmerFeatures
+    )
+
+    val adminPageContent = PageContent(
+        eyebrow = "Platform management",
+        title = "Admin Dashboard",
+        subtitle =
+            "Keep HarvestLink safe, reliable, and organised.",
+        searchPlaceholder =
+            "Search admin options...",
+        sectionTitle = "Admin Management",
+        features = adminFeatures
+    )
+
+    fun getRoleDestination(
+        userRole: String
+    ): String {
+        return when (userRole) {
+            UserRole.BUYER ->
+                HOME_ROUTE
+
+            UserRole.FARMER ->
+                FARMER_ROUTE
+
+            UserRole.ADMIN ->
+                ADMIN_ROUTE
+
+            else ->
+                ROLE_SELECTION_ROUTE
+        }
+    }
+    fun getLoginRoute(
+        userRole: String
+    ): String {
+        return "login/$userRole"
+    }
+
+    fun getSignUpRoute(
+        userRole: String
+    ): String {
+        return "sign_up/$userRole"
+    }
 }

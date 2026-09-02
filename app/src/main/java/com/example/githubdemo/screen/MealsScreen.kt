@@ -6,19 +6,14 @@ import com.example.githubdemo.data.AppData
 import com.example.githubdemo.ui.theme.GithubDemoTheme
 
 @Composable
-fun MealsScreen() {
+fun MealsScreen(
+    onNavigate: (String) -> Unit = {}
+) {
     CommonPageScreen(
-        eyebrow = "Cook with less waste",
-        title = "Meals",
+        pageContent =
+            AppData.mealsPageContent,
 
-        subtitle =
-            "Simple recipes using affordable ingredients.",
-
-        searchPlaceholder =
-            "Search recipes or ingredients...",
-
-        sectionTitle = "Meal Ideas",
-        features = AppData.mealFeatures
+        onNavigate = onNavigate
     )
 }
 

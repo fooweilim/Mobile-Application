@@ -6,17 +6,14 @@ import com.example.githubdemo.data.AppData
 import com.example.githubdemo.ui.theme.GithubDemoTheme
 
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(
+    onNavigate: (String) -> Unit = {}
+) {
     CommonPageScreen(
-        eyebrow = "Welcome back",
-        title = "My Profile",
-        subtitle = "Siti Aminah • Kuala Lumpur",
+        pageContent =
+            AppData.profilePageContent,
 
-        searchPlaceholder =
-            "Search profile options...",
-
-        sectionTitle = "My Account",
-        features = AppData.profileFeatures
+        onNavigate = onNavigate
     )
 }
 

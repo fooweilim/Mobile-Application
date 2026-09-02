@@ -1,7 +1,7 @@
 package com.example.githubdemo.screen
 
-import android.content.res.Configuration
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,9 +18,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Card
@@ -32,18 +30,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.githubdemo.model.PageContent
 import com.example.githubdemo.model.PageFeature
-import com.example.githubdemo.ui.theme.DividerColor
 import com.example.githubdemo.ui.theme.ForestGreen
 import com.example.githubdemo.ui.theme.MainText
 import com.example.githubdemo.ui.theme.PageBackground
@@ -51,34 +47,27 @@ import com.example.githubdemo.ui.theme.PrimaryGreen
 import com.example.githubdemo.ui.theme.SecondaryText
 import com.example.githubdemo.ui.theme.SoftGreen
 
-
 @Composable
 fun CommonPageScreen(
-    eyebrow: String,
-    title: String,
-    subtitle: String,
-    searchPlaceholder: String,
-    sectionTitle: String,
-    features: List<PageFeature>
+    pageContent: PageContent,
+    onNavigate: (String) -> Unit = {}
 ) {
-    /*
-     * rememberSaveable keeps the search text
-     * after the phone rotates.
-     */
     var searchText by rememberSaveable {
         mutableStateOf("")
     }
 
-    /*
-     * The Box keeps the UI centred.
-     *
-     * In portrait:
-     * The content uses the available phone width.
-     *
-     * In landscape:
-     * The content keeps a portrait-like maximum width
-     * instead of becoming too wide.
-     */
+    val filteredFeatures =
+        pageContent.features.filter { feature ->
+            feature.title.contains(
+                other = searchText.trim(),
+                ignoreCase = true
+            ) ||
+                    feature.description.contains(
+                        other = searchText.trim(),
+                        ignoreCase = true
+                    )
+        }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -99,21 +88,26 @@ fun CommonPageScreen(
         ) {
             item {
                 PageHeader(
-                    eyebrow = eyebrow,
-                    title = title,
-                    subtitle = subtitle,
+                    pageContent = pageContent,
                     searchText = searchText,
-                    searchPlaceholder = searchPlaceholder,
 
                     onSearchTextChange = {
-                        searchText = it
+                            newSearchText ->
+
+                        if (
+                            newSearchText.length <= 50
+                        ) {
+                            searchText =
+                                newSearchText
+                        }
                     }
                 )
             }
 
             item {
                 Text(
-                    text = sectionTitle,
+                    text =
+                        pageContent.sectionTitle,
 
                     modifier = Modifier.padding(
                         start = 24.dp,
@@ -128,33 +122,39 @@ fun CommonPageScreen(
                 )
             }
 
-            items(
-                items = features,
-                key = { feature ->
-                    feature.title
-                }
-            ) { feature ->
-
-                FeatureCard(
-                    feature = feature,
-
-                    modifier = Modifier.padding(
-                        horizontal = 24.dp,
-                        vertical = 7.dp
+            if (filteredFeatures.isEmpty()) {
+                item {
+                    SearchResultMessage(
+                        searchText = searchText
                     )
-                )
+                }
+            } else {
+                items(
+                    items = filteredFeatures,
+
+                    key = { feature ->
+                        feature.title
+                    }
+                ) { feature ->
+                    FeatureCard(
+                        feature = feature,
+                        onNavigate = onNavigate,
+
+                        modifier = Modifier.padding(
+                            horizontal = 24.dp,
+                            vertical = 7.dp
+                        )
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun PageHeader(
-    eyebrow: String,
-    title: String,
-    subtitle: String,
+fun PageHeader(
+    pageContent: PageContent,
     searchText: String,
-    searchPlaceholder: String,
     onSearchTextChange: (String) -> Unit
 ) {
     Column(
@@ -177,7 +177,7 @@ private fun PageHeader(
             )
     ) {
         Text(
-            text = eyebrow,
+            text = pageContent.eyebrow,
             color = Color(0xFFC6D9D1),
             fontSize = 16.sp
         )
@@ -187,7 +187,7 @@ private fun PageHeader(
         )
 
         Text(
-            text = title,
+            text = pageContent.title,
             color = Color.White,
             fontSize = 32.sp,
             lineHeight = 38.sp,
@@ -199,7 +199,7 @@ private fun PageHeader(
         )
 
         Text(
-            text = subtitle,
+            text = pageContent.subtitle,
             color = Color(0xFFC6D9D1),
             fontSize = 15.sp
         )
@@ -210,16 +210,16 @@ private fun PageHeader(
 
         OutlinedTextField(
             value = searchText,
-
-            onValueChange = {
-                onSearchTextChange(it)
-            },
+            onValueChange = onSearchTextChange,
 
             modifier = Modifier.fillMaxWidth(),
 
             placeholder = {
                 Text(
-                    text = searchPlaceholder,
+                    text =
+                        pageContent
+                            .searchPlaceholder,
+
                     color = Color(0xFFC6D9D1)
                 )
             },
@@ -232,6 +232,15 @@ private fun PageHeader(
                     contentDescription = "Search",
 
                     tint = Color(0xFFC6D9D1)
+                )
+            },
+
+            supportingText = {
+                Text(
+                    text =
+                        "${searchText.length}/50",
+
+                    color = Color(0xFFC6D9D1)
                 )
             },
 
@@ -267,12 +276,27 @@ private fun PageHeader(
 }
 
 @Composable
-private fun FeatureCard(
+fun FeatureCard(
     feature: PageFeature,
+    onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val featureRoute =
+        feature.route
+
+    val clickableModifier =
+        if (featureRoute != null) {
+            Modifier.clickable {
+                onNavigate(featureRoute)
+            }
+        } else {
+            Modifier
+        }
+
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(clickableModifier),
 
         shape = RoundedCornerShape(22.dp),
 
@@ -302,13 +326,19 @@ private fun FeatureCard(
                             RoundedCornerShape(17.dp)
                     ),
 
-                contentAlignment = Alignment.Center
+                contentAlignment =
+                    Alignment.Center
             ) {
                 Icon(
                     imageVector = feature.icon,
-                    contentDescription = feature.title,
+
+                    contentDescription =
+                        feature.title,
+
                     tint = PrimaryGreen,
-                    modifier = Modifier.size(28.dp)
+
+                    modifier =
+                        Modifier.size(28.dp)
                 )
             }
 
@@ -324,11 +354,13 @@ private fun FeatureCard(
                     text = feature.title,
                     color = MainText,
                     fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight =
+                        FontWeight.SemiBold
                 )
 
                 Spacer(
-                    modifier = Modifier.height(4.dp)
+                    modifier =
+                        Modifier.height(4.dp)
                 )
 
                 Text(
@@ -340,4 +372,22 @@ private fun FeatureCard(
             }
         }
     }
+}
+
+@Composable
+fun SearchResultMessage(
+    searchText: String
+) {
+    Text(
+        text =
+            "No result found for '$searchText'.",
+
+        modifier = Modifier.padding(
+            horizontal = 24.dp,
+            vertical = 20.dp
+        ),
+
+        color = SecondaryText,
+        fontSize = 16.sp
+    )
 }

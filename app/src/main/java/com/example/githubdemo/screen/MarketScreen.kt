@@ -6,19 +6,14 @@ import com.example.githubdemo.data.AppData
 import com.example.githubdemo.ui.theme.GithubDemoTheme
 
 @Composable
-fun MarketScreen() {
+fun MarketScreen(
+    onNavigate: (String) -> Unit = {}
+) {
     CommonPageScreen(
-        eyebrow = "Fresh and affordable",
-        title = "Market",
+        pageContent =
+            AppData.marketPageContent,
 
-        subtitle =
-            "Choose quality produce from nearby sellers.",
-
-        searchPlaceholder =
-            "Search products or categories...",
-
-        sectionTitle = "Browse Market",
-        features = AppData.marketFeatures
+        onNavigate = onNavigate
     )
 }
 

@@ -6,17 +6,14 @@ import com.example.githubdemo.data.AppData
 import com.example.githubdemo.ui.theme.GithubDemoTheme
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    onNavigate: (String) -> Unit = {}
+) {
     CommonPageScreen(
-        eyebrow = "Good morning 👋",
-        title = "Siti Aminah",
-        subtitle = "Kuala Lumpur, 50450",
+        pageContent =
+            AppData.homePageContent,
 
-        searchPlaceholder =
-            "Search fresh produce...",
-
-        sectionTitle = "Quick Access",
-        features = AppData.homeFeatures
+        onNavigate = onNavigate
     )
 }
 

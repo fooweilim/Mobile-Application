@@ -6,17 +6,14 @@ import com.example.githubdemo.data.AppData
 import com.example.githubdemo.ui.theme.GithubDemoTheme
 
 @Composable
-fun FoodBoxScreen() {
+fun FoodBoxScreen(
+    onNavigate: (String) -> Unit = {}
+) {
     CommonPageScreen(
-        eyebrow = "Weekly value bundles",
-        title = "Food Box",
+        pageContent =
+            AppData.foodBoxPageContent,
 
-        subtitle =
-            "Subscribe to a box that fits your lifestyle.",
-
-        searchPlaceholder = "Search food boxes...",
-        sectionTitle = "Choose Your Box",
-        features = AppData.foodBoxFeatures
+        onNavigate = onNavigate
     )
 }
 
