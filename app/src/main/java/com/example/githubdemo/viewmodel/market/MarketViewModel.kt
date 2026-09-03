@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 
-import com.example.githubdemo.data.market.ProductRepository
+import com.example.githubdemo.supabase.ProductRepository
 import com.example.githubdemo.model.market.Product
 
 import kotlinx.coroutines.launch

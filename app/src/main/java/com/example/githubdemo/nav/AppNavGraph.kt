@@ -48,6 +48,7 @@ import com.example.githubdemo.screen.authentication.SignUpScreen
 import com.example.githubdemo.screen.userprofile.ProfileScreen
 
 import com.example.githubdemo.viewmodel.authentication.AuthViewModel
+import com.example.githubdemo.viewmodel.market.CartViewModel
 
 
 
@@ -68,6 +69,9 @@ fun AppNavGraph(
 
 
     val authViewModel: AuthViewModel =
+        viewModel()
+
+    val cartViewModel: CartViewModel =
         viewModel()
 
 
@@ -703,31 +707,15 @@ fun AppNavGraph(
              * Buyer Market
              */
             composable(
-
                 route = AppData.MARKET_ROUTE
-
             ){
-
-
-
                 MarketScreen(
-
-
                     onNavigate = {
-
                             route ->
-
-
-
                         navController.navigate(route)
-
-
-                    }
-
-
+                    },
+                    cartViewModel = cartViewModel
                 )
-
-
             }
 
 
@@ -739,41 +727,19 @@ fun AppNavGraph(
              * Cart
              */
             composable(
-
                 route = CART_ROUTE
-
             ){
-
-
-
                 CartScreen(
-
-
                     onBack = {
-
-
                         navController.popBackStack()
-
-
                     },
-
-
-
                     onCheckout = {
-
-
                         navController.navigate(
                             PAYMENT_ROUTE
                         )
-
-
-                    }
-
-
-
+                    },
+                    cartViewModel = cartViewModel
                 )
-
-
             }
 
 

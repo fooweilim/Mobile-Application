@@ -1,9 +1,8 @@
-package com.example.githubdemo.data.market
+package com.example.githubdemo.supabase
 
 import com.example.githubdemo.model.market.CartItem
 import com.example.githubdemo.model.market.CartProduct
 import com.example.githubdemo.model.market.Product
-import com.example.githubdemo.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 
@@ -13,7 +12,7 @@ class CartRepository {
 
     private suspend fun getUserId():String?{
 
-        return SupabaseClient.client
+        return SupabaseConnection.supabase
             .auth
             .currentUserOrNull()
             ?.id
@@ -33,7 +32,7 @@ class CartRepository {
 
         val cartItems =
 
-            SupabaseClient.client
+            SupabaseConnection.supabase
                 .postgrest["cart_items"]
                 .select{
 
@@ -55,7 +54,7 @@ class CartRepository {
 
         val products =
 
-            SupabaseClient.client
+            SupabaseConnection.supabase
                 .postgrest["products"]
                 .select()
                 .decodeList<Product>()
@@ -109,34 +108,78 @@ class CartRepository {
 
 
     suspend fun addCart(
-
         productId:String
-
     ){
 
-
-        val userId =
-            getUserId()
-                ?: return
+        val userId = getUserId()
+            ?: return
 
 
+        val existingCart =
+            SupabaseConnection.supabase
+                .postgrest["cart_items"]
+                .select{
+                    filter {
+                        eq(
+                            "user_id",
+                            userId
+                        )
 
-        SupabaseClient.client
-            .postgrest["cart_items"]
-            .insert(
+                        eq(
+                            "product_id",
+                            productId
+                        )
+                    }
+                }
+                .decodeList<CartItem>()
 
-                CartItem(
 
-                    user_id = userId,
+        if(existingCart.isNotEmpty()){
 
-                    product_id = productId,
+            val cart = existingCart.first()
 
-                    quantity = 1
+            cart.id?.let { cartId ->
+
+                SupabaseConnection.supabase
+                    .postgrest["cart_items"]
+                    .update(
+                        {
+                            set(
+                                "quantity",
+                                cart.quantity + 1
+                            )
+                        }
+                    ){
+                        filter {
+                            eq(
+                                "id",
+                                cartId
+                            )
+                        }
+                    }
+
+            }
+
+        }else{
+
+
+            SupabaseConnection.supabase
+                .postgrest["cart_items"]
+                .insert(
+
+                    CartItem(
+
+                        user_id = userId,
+
+                        product_id = productId,
+
+                        quantity = 1
+
+                    )
 
                 )
 
-            )
-
+        }
 
     }
 
@@ -152,7 +195,7 @@ class CartRepository {
     ){
 
 
-        SupabaseClient.client
+        SupabaseConnection.supabase
             .postgrest["cart_items"]
             .update(
 
@@ -191,7 +234,7 @@ class CartRepository {
     ){
 
 
-        SupabaseClient.client
+        SupabaseConnection.supabase
             .postgrest["cart_items"]
             .delete {
 

@@ -4,7 +4,7 @@ package com.example.githubdemo.viewmodel.market
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 
-import com.example.githubdemo.data.market.CartRepository
+import com.example.githubdemo.supabase.CartRepository
 import com.example.githubdemo.model.market.CartProduct
 
 import kotlinx.coroutines.flow.MutableStateFlow
