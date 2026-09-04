@@ -43,18 +43,21 @@ fun AppBottomNavigationBar(
         ) {
             AppData.bottomNavigationItems.forEach { item ->
 
-                val selected =
+                val selected = if (
+                    item.route == AppData.FOOD_BOX_ROUTE
+                ) {
+                    currentRoute in AppData.foodBoxRoutes
+                } else {
                     currentRoute == item.route
+                }
 
                 NavigationBarItem(
                     selected = selected,
-
                     onClick = {
                         if (!selected) {
                             onItemClick(item.route)
                         }
                     },
-
                     icon = {
                         Box(
                             modifier = Modifier
@@ -65,64 +68,43 @@ fun AppBottomNavigationBar(
                                     } else {
                                         Color.Transparent
                                     },
-                                    shape = RoundedCornerShape(
-                                        15.dp
-                                    )
+                                    shape = RoundedCornerShape(15.dp)
                                 ),
-                            contentAlignment =
-                                Alignment.Center
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector =
-                                    if (selected) {
-                                        item.selectedIcon
-                                    } else {
-                                        item.unselectedIcon
-                                    },
-
-                                contentDescription =
-                                    item.label,
-
-                                tint =
-                                    if (selected) {
-                                        Color.White
-                                    } else {
-                                        SecondaryText
-                                    },
-
-                                modifier =
-                                    Modifier.size(26.dp)
+                                imageVector = if (selected) {
+                                    item.selectedIcon
+                                } else {
+                                    item.unselectedIcon
+                                },
+                                contentDescription = item.label,
+                                tint = if (selected) {
+                                    Color.White
+                                } else {
+                                    SecondaryText
+                                },
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                     },
-
                     label = {
                         Text(
                             text = item.label,
                             fontSize = 11.sp,
-
-                            fontWeight =
-                                if (selected) {
-                                    FontWeight.SemiBold
-                                } else {
-                                    FontWeight.Normal
-                                }
+                            fontWeight = if (selected) {
+                                FontWeight.SemiBold
+                            } else {
+                                FontWeight.Normal
+                            }
                         )
                     },
-
                     alwaysShowLabel = true,
-
-                    colors =
-                        NavigationBarItemDefaults.colors(
-                            selectedTextColor =
-                                PrimaryGreen,
-
-                            unselectedTextColor =
-                                SecondaryText,
-
-                            indicatorColor =
-                                Color.Transparent
-                        )
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedTextColor = PrimaryGreen,
+                        unselectedTextColor = SecondaryText,
+                        indicatorColor = Color.Transparent
+                    )
                 )
             }
         }
