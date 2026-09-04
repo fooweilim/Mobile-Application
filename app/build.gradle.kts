@@ -75,6 +75,10 @@ dependencies {
     implementation(
         "io.github.jan-tennert.supabase:postgrest-kt"
     )
+
+    implementation(
+        "io.github.jan-tennert.supabase:storage-kt"
+    )
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
