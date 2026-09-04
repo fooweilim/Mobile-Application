@@ -1,30 +1,52 @@
 package com.example.githubdemo.screen.farmer
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Nature
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VerifiedUser
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.githubdemo.nav.FarmerRoute
-import com.example.githubdemo.supabase.CloudProfile
-import com.example.githubdemo.supabase.FarmerProductRepository
+import com.example.githubdemo.data.local.LocalAccountStorage
+import com.example.githubdemo.model.farmer.Order
+import com.example.githubdemo.repository.farmer.OrderRepository
+import com.example.githubdemo.repository.farmer.ProductFarmerRepository
+import com.example.githubdemo.screen.farmer.components.FarmerBottomBar
 
 private val FarmerProfileGreen =
     Color(0xFF28785B)
@@ -34,81 +56,63 @@ private val FarmerProfileBackground =
 
 @Composable
 fun FarmerProfileScreen(
-    profile: CloudProfile?,
     onNavigate: (String) -> Unit,
     onSignOut: () -> Unit
 ) {
-    val repository = remember {
-        FarmerProductRepository()
+    val context =
+        LocalContext.current
+
+    val profile = remember {
+        LocalAccountStorage
+            .getProfile(context)
+    }
+
+    val productRepository = remember {
+        ProductFarmerRepository()
+    }
+
+    val orderRepository = remember {
+        OrderRepository()
     }
 
     var productCount by remember {
-        mutableIntStateOf(0)
+        mutableStateOf(0)
+    }
+
+    var orders by remember {
+        mutableStateOf(
+            emptyList<Order>()
+        )
     }
 
     LaunchedEffect(Unit) {
         try {
             productCount =
-                repository
+                productRepository
                     .getProducts()
                     .size
-        } catch (_: Exception) {
+
+            orders =
+                orderRepository
+                    .getOrders()
+        } catch (
+            exception: Exception
+        ) {
             productCount = 0
+            orders = emptyList()
         }
     }
 
-    val farmInformation =
-        remember(
-            profile
-                ?.additionalInformation
-        ) {
-            profile
-                ?.additionalInformation
-                ?.split("|")
-                ?.map {
-                    it.trim()
-                }
-                .orEmpty()
-        }
-
-    val farmerName =
-        profile
-            ?.fullName
-            ?.ifBlank {
-                "Farmer"
+    val totalEarnings =
+        orders
+            .filter {
+                it.status.equals(
+                    other = "Delivered",
+                    ignoreCase = true
+                )
             }
-            ?: "Farmer"
-
-    val farmerEmail =
-        profile
-            ?.email
-            ?.ifBlank {
-                "No email"
-            }
-            ?: "No email"
-
-    val farmName =
-        farmInformation
-            .getOrNull(0)
-            .orEmpty()
-            .ifBlank {
-                "Farm details not available"
-            }
-
-    val stateName =
-        farmInformation
-            .getOrNull(1)
-            .orEmpty()
-            .ifBlank {
-                "Malaysia"
-            }
-
-    val farmType =
-        farmInformation
-            .getOrNull(2)
-            .orEmpty()
-            .ifBlank {
-                "Farmer"
+            .sumOf {
+                it.price
             }
 
     Scaffold(
@@ -117,330 +121,346 @@ fun FarmerProfileScreen(
 
         bottomBar = {
             FarmerBottomBar(
-                currentRoute =
-                    FarmerRoute.PROFILE,
+                current = "profile",
 
                 onNavigate =
                     onNavigate
             )
         }
-    ) { paddingValues ->
-
-        LazyColumn(
-            contentPadding =
-                PaddingValues(
-                    bottom = 24.dp
-                ),
-
-            modifier =
-                Modifier.padding(
-                    paddingValues
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .verticalScroll(
+                    rememberScrollState()
                 )
         ) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            FarmerProfileGreen
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(185.dp)
+                    .background(
+                        FarmerProfileGreen
+                    )
+            ) {
+                Column(
+                    modifier =
+                        Modifier.padding(
+                            20.dp
                         )
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .statusBarsPadding()
-                            .padding(20.dp)
+                    Text(
+                        text = "Profile",
+
+                        color = Color.White,
+
+                        fontSize = 22.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+
+                    Spacer(
+                        modifier =
+                            Modifier.height(
+                                20.dp
+                            )
+                    )
+
+                    Row(
+                        verticalAlignment =
+                            Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Profile",
+                        Box(
+                            modifier = Modifier
+                                .size(65.dp)
+                                .background(
+                                    color =
+                                        Color(
+                                            0xFFE4EEE7
+                                        ),
 
-                            color =
-                                Color.White,
+                                    shape =
+                                        CircleShape
+                                ),
 
-                            fontSize = 22.sp,
-
-                            fontWeight =
-                                FontWeight.Bold
-                        )
+                            contentAlignment =
+                                Alignment.Center
+                        ) {
+                            Text(
+                                text = "🌱",
+                                fontSize = 28.sp
+                            )
+                        }
 
                         Spacer(
                             modifier =
-                                Modifier.height(
-                                    20.dp
+                                Modifier.padding(
+                                    horizontal =
+                                        8.dp
                                 )
                         )
 
-                        Row(
-                            verticalAlignment =
-                                Alignment
-                                    .CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(65.dp)
-                                    .background(
-                                        color =
-                                            Color(
-                                                0xFFE8F5EC
-                                            ),
-
-                                        shape =
-                                            CircleShape
-                                    ),
-
-                                contentAlignment =
-                                    Alignment.Center
+                        Column {
+                            Row(
+                                verticalAlignment =
+                                    Alignment
+                                        .CenterVertically
                             ) {
-                                Icon(
-                                    imageVector =
-                                        Icons.Default
-                                            .Person,
+                                Text(
+                                    text =
+                                        profile
+                                            ?.fullName
+                                            ?: "Farmer",
 
-                                    contentDescription =
-                                        null,
+                                    color =
+                                        Color.White,
 
-                                    tint =
-                                        FarmerProfileGreen,
+                                    fontWeight =
+                                        FontWeight.Bold,
+
+                                    fontSize =
+                                        18.sp
+                                )
+
+                                Spacer(
+                                    modifier =
+                                        Modifier.padding(
+                                            horizontal =
+                                                4.dp
+                                        )
+                                )
+
+                                Text(
+                                    text =
+                                        " VERIFIED ",
+
+                                    color =
+                                        Color.White,
+
+                                    fontSize =
+                                        10.sp,
 
                                     modifier =
                                         Modifier
-                                            .size(34.dp)
+                                            .background(
+                                                color =
+                                                    Color(
+                                                        0xFFFFA726
+                                                    ),
+
+                                                shape =
+                                                    RoundedCornerShape(
+                                                        10.dp
+                                                    )
+                                            )
+                                            .padding(
+                                                horizontal =
+                                                    4.dp,
+
+                                                vertical =
+                                                    2.dp
+                                            )
                                 )
                             }
 
-                            Spacer(
-                                modifier =
-                                    Modifier.width(
-                                        15.dp
-                                    )
+                            Text(
+                                text =
+                                    profile?.email
+                                        ?: "No email",
+
+                                color =
+                                    Color.White
                             )
 
-                            Column {
-                                Row(
-                                    verticalAlignment =
-                                        Alignment
-                                            .CenterVertically
-                                ) {
-                                    Text(
-                                        text =
-                                            farmerName,
+                            Text(
+                                text =
+                                    "Registered Farmer",
 
-                                        color =
-                                            Color.White,
-
-                                        fontWeight =
-                                            FontWeight
-                                                .Bold,
-
-                                        fontSize =
-                                            18.sp
+                                color =
+                                    Color(
+                                        0xFFD9E8DD
                                     )
-
-                                    if (
-                                        profile
-                                            ?.emailVerified ==
-                                        true
-                                    ) {
-                                        Spacer(
-                                            modifier =
-                                                Modifier
-                                                    .width(
-                                                        8.dp
-                                                    )
-                                        )
-
-                                        Text(
-                                            text =
-                                                "VERIFIED",
-
-                                            color =
-                                                Color.White,
-
-                                            fontSize =
-                                                10.sp,
-
-                                            modifier =
-                                                Modifier
-                                                    .background(
-                                                        color =
-                                                            Color(
-                                                                0xFFFFA726
-                                                            ),
-
-                                                        shape =
-                                                            RoundedCornerShape(
-                                                                10.dp
-                                                            )
-                                                    )
-                                                    .padding(
-                                                        horizontal =
-                                                            7.dp,
-
-                                                        vertical =
-                                                            3.dp
-                                                    )
-                                        )
-                                    }
-                                }
-
-                                Text(
-                                    text =
-                                        farmerEmail,
-
-                                    color =
-                                        Color.White
-                                )
-
-                                Text(
-                                    text =
-                                        "$stateName, Malaysia",
-
-                                    color =
-                                        Color(
-                                            0xFFD9E8DD
-                                        )
-                                )
-                            }
+                            )
                         }
                     }
                 }
             }
 
-            item {
-                Spacer(
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        20.dp
+                    )
+            )
+
+            Card(
+                modifier = Modifier
+                    .padding(
+                        horizontal =
+                            20.dp
+                    )
+                    .fillMaxWidth(),
+
+                shape =
+                    RoundedCornerShape(
+                        22.dp
+                    )
+            ) {
+                Row(
                     modifier =
-                        Modifier.height(20.dp)
-                )
-
-                Card(
-                    modifier = Modifier
-                        .padding(
-                            horizontal = 20.dp
-                        )
-                        .fillMaxWidth(),
-
-                    shape =
-                        RoundedCornerShape(
-                            22.dp
-                        )
-                ) {
-                    Row(
-                        modifier = Modifier
+                        Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
+                            .padding(
+                                20.dp
+                            ),
 
-                        horizontalArrangement =
-                            Arrangement
-                                .SpaceAround
-                    ) {
-                        FarmerProfileStat(
-                            value =
-                                productCount
-                                    .toString(),
+                    horizontalArrangement =
+                        Arrangement.SpaceAround
+                ) {
+                    FarmerProfileStat(
+                        value =
+                            "RM %.2f".format(
+                                totalEarnings
+                            ),
 
-                            title = "Products"
-                        )
+                        title =
+                            "Earnings"
+                    )
 
-                        FarmerProfileStat(
-                            value = "Verified",
-                            title = "Status"
-                        )
+                    FarmerProfileStat(
+                        value =
+                            orders.size
+                                .toString(),
 
-                        FarmerProfileStat(
-                            value = farmType,
-                            title = "Farm Type"
-                        )
-                    }
+                        title =
+                            "Orders"
+                    )
+
+                    FarmerProfileStat(
+                        value =
+                            productCount
+                                .toString(),
+
+                        title =
+                            "Products"
+                    )
                 }
             }
 
-            item {
-                Spacer(
-                    modifier =
-                        Modifier.height(20.dp)
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        20.dp
+                    )
+            )
+
+            Column(
+                modifier = Modifier
+                    .padding(
+                        horizontal =
+                            20.dp
+                    )
+                    .background(
+                        color =
+                            Color.White,
+
+                        shape =
+                            RoundedCornerShape(
+                                25.dp
+                            )
+                    )
+            ) {
+                FarmerProfileMenuItem(
+                    icon =
+                        Icons.Default.Nature,
+
+                    title =
+                        "Farm Details"
                 )
 
-                Column(
-                    modifier = Modifier
-                        .padding(
-                            horizontal = 20.dp
-                        )
-                        .background(
-                            color =
-                                Color.White,
+                FarmerProfileMenuItem(
+                    icon =
+                        Icons.Default
+                            .AccountBalance,
 
-                            shape =
-                                RoundedCornerShape(
-                                    25.dp
-                                )
-                        )
-                ) {
-                    FarmerProfileMenuItem(
-                        icon =
-                            Icons.Default.Nature,
-
-                        title = farmName
-                    )
-
-                    FarmerProfileMenuItem(
-                        icon =
-                            Icons.Default
-                                .AccountBalance,
-
-                        title =
-                            "Banking Info"
-                    )
-
-                    FarmerProfileMenuItem(
-                        icon =
-                            Icons.Default
-                                .VerifiedUser,
-
-                        title =
-                            "Verification Status"
-                    )
-
-                    FarmerProfileMenuItem(
-                        icon =
-                            Icons.Default
-                                .Notifications,
-
-                        title =
-                            "Notifications"
-                    )
-                }
-            }
-
-            item {
-                Spacer(
-                    modifier =
-                        Modifier.height(20.dp)
+                    title =
+                        "Banking Info"
                 )
 
-                OutlinedButton(
-                    onClick = onSignOut,
+                FarmerProfileMenuItem(
+                    icon =
+                        Icons.Default.Star,
 
-                    modifier = Modifier
-                        .padding(
-                            horizontal = 20.dp
-                        )
-                        .fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector =
-                            Icons.Default.Logout,
+                    title =
+                        "Premium Plan"
+                )
 
-                        contentDescription =
-                            null
-                    )
+                FarmerProfileMenuItem(
+                    icon =
+                        Icons.Default
+                            .VerifiedUser,
 
-                    Spacer(
-                        modifier =
-                            Modifier.width(8.dp)
-                    )
+                    title =
+                        "Verification Status"
+                )
 
-                    Text("Sign Out")
-                }
+                FarmerProfileMenuItem(
+                    icon =
+                        Icons.Default
+                            .Notifications,
+
+                    title =
+                        "Notifications"
+                )
             }
+
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        20.dp
+                    )
+            )
+
+            OutlinedButton(
+                onClick =
+                    onSignOut,
+
+                modifier = Modifier
+                    .padding(
+                        horizontal =
+                            20.dp
+                    )
+                    .fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector =
+                        Icons.Default.Logout,
+
+                    contentDescription =
+                        "Sign Out"
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.padding(
+                            horizontal =
+                                4.dp
+                        )
+                )
+
+                Text(
+                    text = "Sign Out"
+                )
+            }
+
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        20.dp
+                    )
+            )
         }
     }
 }
@@ -451,11 +471,6 @@ private fun FarmerProfileStat(
     title: String
 ) {
     Column(
-        modifier =
-            Modifier.padding(
-                horizontal = 4.dp
-            ),
-
         horizontalAlignment =
             Alignment.CenterHorizontally
     ) {
@@ -463,14 +478,14 @@ private fun FarmerProfileStat(
             text = value,
 
             fontWeight =
-                FontWeight.Bold,
-
-            maxLines = 1
+                FontWeight.Bold
         )
 
         Text(
             text = title,
-            fontSize = 12.sp
+
+            fontSize =
+                12.sp
         )
     }
 }
@@ -485,7 +500,8 @@ private fun FarmerProfileMenuItem(
             .fillMaxWidth()
             .height(58.dp)
             .padding(
-                horizontal = 15.dp
+                horizontal =
+                    15.dp
             ),
 
         verticalAlignment =
@@ -493,7 +509,9 @@ private fun FarmerProfileMenuItem(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+
+            contentDescription =
+                title,
 
             tint =
                 FarmerProfileGreen
@@ -501,16 +519,17 @@ private fun FarmerProfileMenuItem(
 
         Spacer(
             modifier =
-                Modifier.width(15.dp)
+                Modifier.padding(
+                    horizontal =
+                        8.dp
+                )
         )
 
         Text(
             text = title,
 
             modifier =
-                Modifier.weight(1f),
-
-            maxLines = 1
+                Modifier.weight(1f)
         )
 
         Icon(
@@ -518,7 +537,8 @@ private fun FarmerProfileMenuItem(
                 Icons.Default
                     .ChevronRight,
 
-            contentDescription = null
+            contentDescription =
+                null
         )
     }
 }

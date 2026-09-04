@@ -1,6 +1,7 @@
 package com.example.githubdemo.viewmodel.foodbox
 
 import android.app.Application
+import android.content.Context
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
@@ -19,20 +20,17 @@ import com.example.githubdemo.model.PaymentMethod
 import com.example.githubdemo.supabase.FoodBoxCloudRepository
 import kotlinx.coroutines.launch
 
-private const val MINIMUM_ADDRESS_LENGTH =
-    10
+private const val MINIMUM_ADDRESS_LENGTH = 8
 
 class FoodBoxViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val appContext =
+    private val appContext: Context =
         application.applicationContext
 
     private val _uiState =
-        mutableStateOf(
-            createInitialState()
-        )
+        mutableStateOf(createInitialState())
 
     val uiState: State<FoodBoxUiState> =
         _uiState
@@ -41,9 +39,7 @@ class FoodBoxViewModel(
         refreshActiveSubscription()
     }
 
-    fun getSelectedPlan():
-            FoodBoxPlan? {
-
+    fun getSelectedPlan(): FoodBoxPlan? {
         return FoodBoxData.getPlan(
             _uiState.value.selectedPlanId
         )
@@ -52,37 +48,31 @@ class FoodBoxViewModel(
     fun selectBillingCycle(
         billingCycle: BillingCycle
     ) {
-        _uiState.value =
-            _uiState.value.copy(
-                billingCycle = billingCycle,
-                message = null
-            )
+        _uiState.value = _uiState.value.copy(
+            billingCycle = billingCycle,
+            message = null
+        )
 
         saveDraft()
     }
 
-    fun selectPlan(
-        planId: String
-    ) {
+    fun selectPlan(planId: String) {
         val plan =
             FoodBoxData.getPlan(planId)
                 ?: return
 
-        _uiState.value =
-            _uiState.value.copy(
-                selectedPlanId = plan.id,
-                customizedItems = plan.items,
-                selectedAddOns = emptyList(),
-                itemBeingSwappedId = null,
-                message = null
-            )
+        _uiState.value = _uiState.value.copy(
+            selectedPlanId = plan.id,
+            customizedItems = plan.items,
+            selectedAddOns = emptyList(),
+            itemBeingSwappedId = null,
+            message = null
+        )
 
         saveDraft()
     }
 
-    fun showSwapOptions(
-        itemId: String
-    ) {
+    fun showSwapOptions(itemId: String) {
         val item =
             _uiState.value
                 .customizedItems
@@ -94,6 +84,7 @@ class FoodBoxViewModel(
         if (!item.swappable) {
             _uiState.value =
                 _uiState.value.copy(
+                    itemBeingSwappedId = null,
                     message =
                         "${item.name} is a fixed item."
                 )
@@ -152,10 +143,6 @@ class FoodBoxViewModel(
             return
         }
 
-        /*
-         * The replacement keeps the
-         * original/default item weight.
-         */
         val replacementWithOriginalWeight =
             replacement.copy(
                 id = original.id,
@@ -164,21 +151,20 @@ class FoodBoxViewModel(
                 isSwapped = true
             )
 
+        val updatedItems =
+            _uiState.value
+                .customizedItems
+                .map { item ->
+                    if (item.id == originalId) {
+                        replacementWithOriginalWeight
+                    } else {
+                        item
+                    }
+                }
+
         _uiState.value =
             _uiState.value.copy(
-                customizedItems =
-                    _uiState.value
-                        .customizedItems
-                        .map { item ->
-                            if (
-                                item.id ==
-                                originalId
-                            ) {
-                                replacementWithOriginalWeight
-                            } else {
-                                item
-                            }
-                        },
+                customizedItems = updatedItems,
                 itemBeingSwappedId = null,
                 message =
                     "${original.name} changed to " +
@@ -209,7 +195,8 @@ class FoodBoxViewModel(
                     }
             } else {
                 _uiState.value
-                    .selectedAddOns + addOn
+                    .selectedAddOns +
+                        addOn
             }
 
         _uiState.value =
@@ -221,9 +208,11 @@ class FoodBoxViewModel(
         saveDraft()
     }
 
-    fun selectDeliveryDay(
-        day: String
-    ) {
+    fun selectDeliveryDay(day: String) {
+        if (day !in FoodBoxData.deliveryDays) {
+            return
+        }
+
         _uiState.value =
             _uiState.value.copy(
                 deliveryDay = day,
@@ -236,11 +225,11 @@ class FoodBoxViewModel(
     fun updateDeliveryAddress(
         address: String
     ): Boolean {
-        val clean =
+        val cleanAddress =
             address.trim()
 
         if (
-            clean.length <
+            cleanAddress.length <
             MINIMUM_ADDRESS_LENGTH
         ) {
             _uiState.value =
@@ -254,7 +243,7 @@ class FoodBoxViewModel(
 
         _uiState.value =
             _uiState.value.copy(
-                deliveryAddress = clean,
+                deliveryAddress = cleanAddress,
                 message = null
             )
 
@@ -307,15 +296,22 @@ class FoodBoxViewModel(
         userId: String?,
         onFinished: () -> Unit
     ) {
+        if (_uiState.value.isLoading) {
+            return
+        }
+
         val state =
             _uiState.value
 
-        val plan =
-            getSelectedPlan()
+        val activeSubscription =
+            state.activeSubscription
 
         if (
-            state.activeSubscription?.status ==
-            FoodBoxData.STATUS_ACTIVE
+            activeSubscription != null &&
+            activeSubscription.status.equals(
+                FoodBoxData.STATUS_ACTIVE,
+                ignoreCase = true
+            )
         ) {
             _uiState.value =
                 state.copy(
@@ -328,7 +324,10 @@ class FoodBoxViewModel(
             return
         }
 
-        if (userId.isNullOrBlank()) {
+        val cleanUserId =
+            userId.orEmpty().trim()
+
+        if (cleanUserId.isBlank()) {
             _uiState.value =
                 state.copy(
                     message =
@@ -337,6 +336,9 @@ class FoodBoxViewModel(
 
             return
         }
+
+        val plan =
+            getSelectedPlan()
 
         if (plan == null) {
             _uiState.value =
@@ -358,10 +360,7 @@ class FoodBoxViewModel(
             return
         }
 
-        if (
-            state.deliveryAddress.length <
-            MINIMUM_ADDRESS_LENGTH
-        ) {
+        if (state.deliveryAddress.isBlank()) {
             _uiState.value =
                 state.copy(
                     message =
@@ -371,32 +370,49 @@ class FoodBoxViewModel(
             return
         }
 
+        val createdAt =
+            System.currentTimeMillis()
+
         val subscription =
             FoodBoxSubscription(
                 id =
-                    System.currentTimeMillis()
-                        .toString(),
-                userId = userId,
-                planId = plan.id,
-                planName = plan.name,
+                    "food_box_$createdAt",
+
+                userId =
+                    cleanUserId,
+
+                planId =
+                    plan.id,
+
+                planName =
+                    plan.name,
+
                 billingCycle =
                     state.billingCycle,
+
                 customizedItems =
                     state.customizedItems,
+
                 selectedAddOns =
                     state.selectedAddOns,
+
                 deliveryDay =
                     state.deliveryDay,
+
                 deliveryAddress =
                     state.deliveryAddress,
+
                 paymentMethod =
                     state.paymentMethod,
+
                 totalPrice =
                     getTotalPrice(),
+
                 status =
                     FoodBoxData.STATUS_ACTIVE,
+
                 createdAt =
-                    System.currentTimeMillis()
+                    createdAt
             )
 
         _uiState.value =
@@ -406,43 +422,48 @@ class FoodBoxViewModel(
             )
 
         viewModelScope.launch {
-            val result =
-                FoodBoxCloudRepository
-                    .createSubscription(
-                        subscription
-                    )
+            FoodBoxCloudRepository
+                .createSubscription(
+                    subscription
+                )
+                .onSuccess {
+                    FoodBoxLocalStorage
+                        .saveSubscription(
+                            appContext,
+                            subscription
+                        )
 
-            result.onSuccess {
-                FoodBoxLocalStorage
-                    .saveSubscription(
-                        appContext,
-                        subscription
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            activeSubscription =
+                                subscription,
 
-                _uiState.value =
-                    _uiState.value.copy(
-                        activeSubscription =
-                            subscription,
-                        isLoading = false,
-                        message = null
-                    )
+                            isLoading = false,
+                            message = null
+                        )
 
-                onFinished()
-            }.onFailure { exception ->
-                _uiState.value =
-                    _uiState.value.copy(
-                        isLoading = false,
-                        message =
-                            exception.message
-                                ?: "Unable to create the subscription."
-                    )
-            }
+                    onFinished()
+                }
+                .onFailure { exception ->
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
+
+                            message =
+                                exception.message
+                                    ?: "Unable to create the subscription."
+                        )
+                }
         }
     }
 
     fun updateSubscriptionDeliveryDay(
         day: String
     ) {
+        if (day !in FoodBoxData.deliveryDays) {
+            return
+        }
+
         val subscription =
             _uiState.value
                 .activeSubscription
@@ -455,23 +476,24 @@ class FoodBoxViewModel(
 
         _uiState.value =
             _uiState.value.copy(
-                deliveryDay = day,
                 activeSubscription = updated,
+                deliveryDay = day,
                 message =
                     "Delivery day updated to $day."
             )
 
+        saveDraft()
         saveSubscriptionChange(updated)
     }
 
     fun updateSubscriptionAddress(
         address: String
     ): Boolean {
-        val clean =
+        val cleanAddress =
             address.trim()
 
         if (
-            clean.length <
+            cleanAddress.length <
             MINIMUM_ADDRESS_LENGTH
         ) {
             _uiState.value =
@@ -490,17 +512,19 @@ class FoodBoxViewModel(
 
         val updated =
             subscription.copy(
-                deliveryAddress = clean
+                deliveryAddress =
+                    cleanAddress
             )
 
         _uiState.value =
             _uiState.value.copy(
-                deliveryAddress = clean,
                 activeSubscription = updated,
+                deliveryAddress = cleanAddress,
                 message =
                     "Delivery address updated."
             )
 
+        saveDraft()
         saveSubscriptionChange(updated)
 
         return true
@@ -511,7 +535,8 @@ class FoodBoxViewModel(
     ) {
         _uiState.value =
             _uiState.value.copy(
-                reminderSettings = settings
+                reminderSettings = settings,
+                message = null
             )
 
         FoodBoxLocalStorage
@@ -519,11 +544,13 @@ class FoodBoxViewModel(
                 appContext,
                 settings
             )
-
-        saveDraft()
     }
 
     fun cancelSubscription() {
+        if (_uiState.value.isLoading) {
+            return
+        }
+
         val subscription =
             _uiState.value
                 .activeSubscription
@@ -536,34 +563,34 @@ class FoodBoxViewModel(
             )
 
         viewModelScope.launch {
-            val result =
-                FoodBoxCloudRepository
-                    .deleteSubscription(
-                        subscription.id
-                    )
+            FoodBoxCloudRepository
+                .deleteSubscription(
+                    subscription.id
+                )
+                .onSuccess {
+                    FoodBoxLocalStorage
+                        .clearSubscription(
+                            appContext
+                        )
 
-            result.onSuccess {
-                FoodBoxLocalStorage
-                    .clearSubscription(
-                        appContext
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            activeSubscription = null,
+                            isLoading = false,
+                            message =
+                                "Subscription cancelled."
+                        )
+                }
+                .onFailure { exception ->
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
 
-                _uiState.value =
-                    _uiState.value.copy(
-                        activeSubscription = null,
-                        isLoading = false,
-                        message =
-                            "Your subscription has been cancelled."
-                    )
-            }.onFailure { exception ->
-                _uiState.value =
-                    _uiState.value.copy(
-                        isLoading = false,
-                        message =
-                            exception.message
-                                ?: "Unable to cancel the subscription."
-                    )
-            }
+                            message =
+                                exception.message
+                                    ?: "Unable to cancel the subscription."
+                        )
+                }
         }
     }
 
@@ -572,6 +599,89 @@ class FoodBoxViewModel(
             _uiState.value.copy(
                 message = null
             )
+    }
+
+    fun refreshActiveSubscription(
+        userId: String? =
+            LocalAccountStorage
+                .getProfile(appContext)
+                ?.id
+    ) {
+        val cleanUserId =
+            userId.orEmpty().trim()
+
+        if (cleanUserId.isBlank()) {
+            _uiState.value =
+                _uiState.value.copy(
+                    activeSubscription = null,
+                    isLoading = false
+                )
+
+            return
+        }
+
+        _uiState.value =
+            _uiState.value.copy(
+                isLoading = true,
+                message = null
+            )
+
+        viewModelScope.launch {
+            FoodBoxCloudRepository
+                .getActiveSubscription(
+                    cleanUserId
+                )
+                .onSuccess { subscription ->
+                    if (subscription == null) {
+                        FoodBoxLocalStorage
+                            .clearSubscription(
+                                appContext
+                            )
+                    } else {
+                        FoodBoxLocalStorage
+                            .saveSubscription(
+                                appContext,
+                                subscription
+                            )
+                    }
+
+                    _uiState.value =
+                        _uiState.value.copy(
+                            activeSubscription =
+                                subscription,
+
+                            isLoading = false,
+                            message = null
+                        )
+                }
+                .onFailure { exception ->
+                    val savedSubscription =
+                        FoodBoxLocalStorage
+                            .loadSubscription(
+                                appContext
+                            )
+                            ?.takeIf {
+                                it.userId ==
+                                        cleanUserId &&
+                                        it.status.equals(
+                                            FoodBoxData.STATUS_ACTIVE,
+                                            ignoreCase = true
+                                        )
+                            }
+
+                    _uiState.value =
+                        _uiState.value.copy(
+                            activeSubscription =
+                                savedSubscription,
+
+                            isLoading = false,
+
+                            message =
+                                exception.message
+                                    ?: "Unable to refresh the subscription."
+                        )
+                }
+        }
     }
 
     private fun saveSubscriptionChange(
@@ -583,23 +693,17 @@ class FoodBoxViewModel(
                 subscription
             )
 
-        saveDraft()
-
         viewModelScope.launch {
-            val result =
-                FoodBoxCloudRepository
-                    .updateSubscription(
-                        subscription
-                    )
-
-            result
-                .exceptionOrNull()
-                ?.message
-                ?.let { errorMessage ->
+            FoodBoxCloudRepository
+                .updateSubscription(
+                    subscription
+                )
+                .onFailure { exception ->
                     _uiState.value =
                         _uiState.value.copy(
                             message =
-                                errorMessage
+                                exception.message
+                                    ?: "Unable to save the subscription change."
                         )
                 }
         }
@@ -612,57 +716,16 @@ class FoodBoxViewModel(
         )
     }
 
-    fun refreshActiveSubscription(
-        userId: String? =
-            LocalAccountStorage
-                .getProfile(appContext)
-                ?.id
-    ) {
-        if (userId.isNullOrBlank()) {
-            return
-        }
-
-        viewModelScope.launch {
-            FoodBoxCloudRepository
-                .getActiveSubscription(
-                    userId
-                )
-                .onSuccess {
-                        cloudSubscription ->
-
-                    if (
-                        cloudSubscription ==
-                        null
-                    ) {
-                        FoodBoxLocalStorage
-                            .clearSubscription(
-                                appContext
-                            )
-                    } else {
-                        FoodBoxLocalStorage
-                            .saveSubscription(
-                                appContext,
-                                cloudSubscription
-                            )
-                    }
-
-                    _uiState.value =
-                        _uiState.value.copy(
-                            activeSubscription =
-                                cloudSubscription
-                        )
-                }
-        }
-    }
-
     private fun createInitialState():
             FoodBoxUiState {
+        val defaultPlan =
+            FoodBoxData.plans.first()
 
         val savedDraft =
             FoodBoxLocalStorage
                 .loadDraft(appContext)
 
-        val subscription =
+        val savedSubscription =
             FoodBoxLocalStorage
                 .loadSubscription(
                     appContext
@@ -674,28 +737,42 @@ class FoodBoxViewModel(
                     appContext
                 )
 
-        if (savedDraft != null) {
-            return savedDraft.copy(
+        val validSavedPlan =
+            savedDraft
+                ?.selectedPlanId
+                ?.let(
+                    FoodBoxData::getPlan
+                )
+
+        return if (
+            savedDraft != null &&
+            validSavedPlan != null
+        ) {
+            savedDraft.copy(
                 activeSubscription =
-                    subscription,
+                    savedSubscription,
+
                 reminderSettings =
                     reminders,
-                itemBeingSwappedId =
-                    null,
+
+                itemBeingSwappedId = null,
                 isLoading = false,
                 message = null
             )
+        } else {
+            FoodBoxUiState(
+                selectedPlanId =
+                    defaultPlan.id,
+
+                customizedItems =
+                    defaultPlan.items,
+
+                activeSubscription =
+                    savedSubscription,
+
+                reminderSettings =
+                    reminders
+            )
         }
-
-        val plan =
-            FoodBoxData.plans.first()
-
-        return FoodBoxUiState(
-            selectedPlanId = plan.id,
-            customizedItems = plan.items,
-            activeSubscription =
-                subscription,
-            reminderSettings = reminders
-        )
     }
 }

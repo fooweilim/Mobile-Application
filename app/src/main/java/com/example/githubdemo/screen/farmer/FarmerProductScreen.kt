@@ -1,868 +1,580 @@
 package com.example.githubdemo.screen.farmer
 
-
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-
-import androidx.compose.material3.*
-
-import androidx.compose.runtime.*
-
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-
-import com.example.githubdemo.model.farmer.FarmerOrder
-import com.example.githubdemo.nav.FarmerRoute
-import com.example.githubdemo.repository.FarmerOrderRepository
-
+import coil.compose.AsyncImage
+import com.example.githubdemo.model.farmer.Product
+import com.example.githubdemo.repository.farmer.ProductFarmerRepository
+import com.example.githubdemo.screen.farmer.components.FarmerBottomBar
 import kotlinx.coroutines.launch
 
-
-
-private val OrderBackground =
-    Color(0xFFF8F5ED)
-
-
-private val OrderGreen =
+private val ProductScreenGreen =
     Color(0xFF28785B)
 
-
-
-private val FarmerOrderTabs =
-    listOf(
-        "Pending",
-        "Active",
-        "Delivered"
-    )
-
-
-
-
+private val ProductScreenBackground =
+    Color(0xFFF8F5ED)
 
 @Composable
-fun FarmerOrdersScreen(
+fun FarmerProductScreen(
+    onAddProduct: () -> Unit,
+    onEditProduct: (Product) -> Unit,
+    onNavigate: (String) -> Unit
+) {
+    val repository = remember {
+        ProductFarmerRepository()
+    }
 
-    farmerId:String,
-
-    onNavigate:(String)->Unit
-
-){
-
-
-
-    val repository =
-        remember {
-
-            FarmerOrderRepository()
-
-        }
-
-
-
-    val scope =
+    val coroutineScope =
         rememberCoroutineScope()
 
-
-
-    var orders by remember {
-
+    var products by remember {
         mutableStateOf(
-            emptyList<FarmerOrder>()
+            emptyList<Product>()
         )
-
     }
-
-
-
-    var selectedTab by remember {
-
-        mutableStateOf(
-            "Pending"
-        )
-
-    }
-
-
 
     var isLoading by remember {
-
         mutableStateOf(true)
-
     }
-
-
 
     var errorMessage by remember {
-
         mutableStateOf("")
-
     }
 
+    var productToDelete by remember {
+        mutableStateOf<Product?>(null)
+    }
 
+    fun loadProducts() {
+        coroutineScope.launch {
+            isLoading = true
+            errorMessage = ""
 
-
-
-
-    fun loadOrders(){
-
-
-        scope.launch{
-
-
-            try{
-
-
-                isLoading = true
-
-
-                orders =
-                    repository
-                        .getFarmerOrders(
-                            farmerId
-                        )
-
-
-            }
-            catch(e:Exception){
-
+            try {
+                products =
+                    repository.getProducts()
+            } catch (
+                exception: Exception
+            ) {
+                products =
+                    emptyList()
 
                 errorMessage =
-                    e.message
-                        ?: "Unable to load orders."
-
-
-            }
-            finally{
-
-
+                    exception.message
+                        ?: "Unable to load products."
+            } finally {
                 isLoading = false
-
-
             }
-
-
-
         }
-
-
     }
 
-
-
-
-
-
-
-    fun updateOrderStatus(
-
-        order:FarmerOrder,
-
-        status:String
-
-    ){
-
-
-
-        order.id?.let { id ->
-
-
-
-            scope.launch{
-
-
-                try{
-
-
-                    repository.updateStatus(
-
-                        orderId = id,
-
-                        newStatus = status
-
-                    )
-
-
-                    loadOrders()
-
-
-
-                }
-                catch(e:Exception){
-
-
-                    errorMessage =
-                        e.message
-                            ?: "Unable to update order."
-
-                }
-
-
-
-            }
-
-
-        }
-
-
-
+    LaunchedEffect(Unit) {
+        loadProducts()
     }
-
-
-
-
-
-
-
-    LaunchedEffect(Unit){
-
-        loadOrders()
-
-    }
-
-
-
-
-
-
-
-    val filteredOrders =
-
-        orders.filter{
-
-
-            it.status.equals(
-
-                selectedTab,
-
-                true
-
-            )
-
-
-        }
-
-
-
-
-
-
-
 
     Scaffold(
-
         containerColor =
-            OrderBackground,
-
+            ProductScreenBackground,
 
         bottomBar = {
-
-
             FarmerBottomBar(
-
-                currentRoute =
-                    FarmerRoute.ORDERS,
-
+                current =
+                    "products",
 
                 onNavigate =
                     onNavigate
-
             )
-
-
         }
-
-
-
-    ){ padding ->
-
-
-
-
+    ) { innerPadding ->
         Column(
-
-            modifier =
-                Modifier
-                    .padding(padding)
-                    .padding(horizontal = 20.dp)
-                    .fillMaxSize()
-
-        ){
-
-
-
-            Spacer(
-                Modifier.height(20.dp)
-            )
-
-
-
-
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(20.dp)
+                .fillMaxSize()
+        ) {
             Row(
-
                 modifier =
                     Modifier.fillMaxWidth(),
-
 
                 horizontalArrangement =
                     Arrangement.SpaceBetween,
 
-
                 verticalAlignment =
                     Alignment.CenterVertically
-
-            ){
-
-
-
+            ) {
                 Text(
+                    text = "My Products",
 
-                    text =
-                        "Orders",
-
-                    fontSize =
-                        24.sp,
-
+                    fontSize = 24.sp,
 
                     fontWeight =
                         FontWeight.Bold
-
                 )
 
+                Button(
+                    onClick =
+                        onAddProduct,
 
-
-
-                IconButton(
-
-                    onClick = ::loadOrders
-
-                ){
-
-
-
-                    Icon(
-
-                        Icons.Default.Refresh,
-
-                        contentDescription = null,
-
-                        tint = OrderGreen
-
-                    )
-
-
-                }
-
-
-            }
-
-
-
-
-
-
-
-            Spacer(
-                Modifier.height(15.dp)
-            )
-
-
-
-
-
-
-            Row(
-
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(
-
-                            Color(0xFFEDE7DC),
-
-                            RoundedCornerShape(25.dp)
-
-                        )
-                        .padding(5.dp),
-
-
-
-                horizontalArrangement =
-                    Arrangement.spacedBy(5.dp)
-
-            ){
-
-
-
-                FarmerOrderTabs.forEach { tab ->
-
-
-
-                    Button(
-
-                        modifier =
-                            Modifier.weight(1f),
-
-
-                        onClick = {
-
-                            selectedTab = tab
-
-                        },
-
-
-
-                        colors =
-                            ButtonDefaults.buttonColors(
-
+                    colors =
+                        ButtonDefaults
+                            .buttonColors(
                                 containerColor =
-
-                                    if(selectedTab == tab)
-
-                                        OrderGreen
-
-                                    else
-
-                                        Color.Gray
-
+                                    ProductScreenGreen
                             ),
 
-
-
-                        shape =
-                            RoundedCornerShape(20.dp)
-
-                    ){
-
-
-
-                        Text(
-
-                            tab,
-
-                            fontSize =
-                                11.sp
-
+                    shape =
+                        RoundedCornerShape(
+                            25.dp
                         )
-
-                    }
-
-
-
+                ) {
+                    Text(
+                        text = "+ Add New"
+                    )
                 }
-
-
             }
-
-
-
-
-
-
 
             Spacer(
-                Modifier.height(15.dp)
+                modifier =
+                    Modifier.height(
+                        20.dp
+                    )
             )
 
-
-
-
-
-
-
-            when{
-
-
+            when {
                 isLoading -> {
-
-
-
                     Box(
-
                         modifier =
                             Modifier.fillMaxSize(),
 
-
                         contentAlignment =
                             Alignment.Center
-
-                    ){
-
-
+                    ) {
                         CircularProgressIndicator(
-
                             color =
-                                OrderGreen
-
+                                ProductScreenGreen
                         )
-
-
                     }
-
-
                 }
-
-
-
-
-
 
                 errorMessage.isNotEmpty() -> {
-
-
-
-                    Text(
-
-                        text =
-                            errorMessage,
-
-
-                        color =
-                            Color.Red
-
-                    )
-
-
-                }
-
-
-
-
-
-
-                filteredOrders.isEmpty() -> {
-
-
-
                     Box(
-
                         modifier =
                             Modifier.fillMaxSize(),
 
+                        contentAlignment =
+                            Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment =
+                                Alignment
+                                    .CenterHorizontally
+                        ) {
+                            Text(
+                                text =
+                                    errorMessage,
+
+                                color =
+                                    Color.Red
+                            )
+
+                            Spacer(
+                                modifier =
+                                    Modifier.height(
+                                        10.dp
+                                    )
+                            )
+
+                            Button(
+                                onClick = {
+                                    loadProducts()
+                                }
+                            ) {
+                                Text(
+                                    text = "Retry"
+                                )
+                            }
+                        }
+                    }
+                }
+
+                products.isEmpty() -> {
+                    Box(
+                        modifier =
+                            Modifier.fillMaxSize(),
 
                         contentAlignment =
                             Alignment.Center
-
-                    ){
-
-
+                    ) {
                         Text(
-
                             text =
-                                "No $selectedTab Orders",
-
+                                "No Products Found",
 
                             color =
-                                Color.Gray
+                                Color.Gray,
 
+                            fontSize =
+                                16.sp
                         )
-
-
                     }
-
-
                 }
-
-
-
-
-
-
 
                 else -> {
-
-
-
                     LazyColumn(
-
                         verticalArrangement =
-                            Arrangement.spacedBy(15.dp)
+                            Arrangement.spacedBy(
+                                15.dp
+                            )
+                    ) {
+                        items(
+                            items = products,
 
-                    ){
+                            key = { product ->
+                                product.id
+                                    ?: product.name
+                            }
+                        ) { product ->
+                            FarmerProductCard(
+                                product = product,
 
-
-
-                        items(filteredOrders){ order ->
-
-
-
-                            FarmerOrderCard(
-
-                                order = order,
-
-
-                                onAccept = {
-
-
-                                    updateOrderStatus(
-
-                                        order,
-
-                                        "Active"
-
+                                onEdit = {
+                                    onEditProduct(
+                                        product
                                     )
-
-
                                 },
 
-
-                                onDelivered = {
-
-
-                                    updateOrderStatus(
-
-                                        order,
-
-                                        "Delivered"
-
-                                    )
-
-
+                                onRemove = {
+                                    productToDelete =
+                                        product
                                 }
-
-
                             )
-
-
-
                         }
-
-
-
                     }
-
-
-
                 }
-
-
             }
-
-
-
-
         }
-
-
-
     }
 
+    val selectedProduct =
+        productToDelete
 
+    if (selectedProduct != null) {
+        AlertDialog(
+            onDismissRequest = {
+                productToDelete = null
+            },
 
+            title = {
+                Text(
+                    text =
+                        "Remove Product"
+                )
+            },
+
+            text = {
+                Text(
+                    text =
+                        "Are you sure you want to remove ${selectedProduct.name}?"
+                )
+            },
+
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val productId =
+                            selectedProduct.id
+
+                        productToDelete =
+                            null
+
+                        if (
+                            !productId
+                                .isNullOrBlank()
+                        ) {
+                            coroutineScope.launch {
+                                try {
+                                    repository
+                                        .deleteProduct(
+                                            productId
+                                        )
+
+                                    loadProducts()
+                                } catch (
+                                    exception:
+                                    Exception
+                                ) {
+                                    errorMessage =
+                                        exception
+                                            .message
+                                            ?: "Unable to remove product."
+                                }
+                            }
+                        }
+                    },
+
+                    colors =
+                        ButtonDefaults
+                            .buttonColors(
+                                containerColor =
+                                    Color.Red
+                            )
+                ) {
+                    Text(
+                        text = "Remove"
+                    )
+                }
+            },
+
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        productToDelete =
+                            null
+                    }
+                ) {
+                    Text(
+                        text = "Cancel"
+                    )
+                }
+            }
+        )
+    }
 }
 
-
-
-
-
-
-
-
 @Composable
-private fun FarmerOrderCard(
-
-    order:FarmerOrder,
-
-    onAccept:()->Unit,
-
-    onDelivered:()->Unit
-
-){
-
-
-
+private fun FarmerProductCard(
+    product: Product,
+    onEdit: () -> Unit,
+    onRemove: () -> Unit
+) {
     Card(
-
         modifier =
             Modifier.fillMaxWidth(),
 
-
         shape =
-            RoundedCornerShape(20.dp)
-
-    ){
-
-
-
-        Column(
-
-            modifier =
-                Modifier.padding(15.dp)
-
-        ){
-
-
-
-            Text(
-
-                text =
-                    "Customer ID: ${order.customer_id ?: "Unknown"}",
-
-
-                fontWeight =
-                    FontWeight.Bold
-
+            RoundedCornerShape(
+                20.dp
             )
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
 
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    15.dp
+                ),
 
-
-
-
-            Text(
-
-                text =
-                    "Product: ${order.product_name}",
-
-
-                fontSize =
-                    13.sp
-
-            )
-
-
-
-
-
-            Text(
-
-                text =
-                    "Quantity: ${order.quantity}",
-
-
-                fontSize =
-                    13.sp
-
-            )
-
-
-
-
-
-            Text(
-
-                text =
-                    "RM %.2f".format(
-
-                        order.price
-
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+            Card(
+                modifier =
+                    Modifier.size(
+                        100.dp
                     ),
 
+                shape =
+                    RoundedCornerShape(
+                        15.dp
+                    )
+            ) {
+                if (
+                    !product.image_url
+                        .isNullOrBlank()
+                ) {
+                    AsyncImage(
+                        model =
+                            product.image_url,
 
-                color =
-                    OrderGreen,
+                        contentDescription =
+                            product.name,
 
+                        modifier =
+                            Modifier.fillMaxSize(),
 
-                fontWeight =
-                    FontWeight.Bold
+                        contentScale =
+                            ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Color(
+                                    0xFFE8F5EC
+                                )
+                            ),
 
-            )
+                        contentAlignment =
+                            Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector =
+                                Icons.Default
+                                    .Image,
 
+                            contentDescription =
+                                null,
 
-
-
-
-            Spacer(
-                Modifier.height(10.dp)
-            )
-
-
-
-
-
-
-            when(order.status){
-
-
-
-                "Pending" -> {
-
-
-
-                    Button(
-
-                        onClick =
-                            onAccept,
-
-
-                        colors =
-                            ButtonDefaults.buttonColors(
-
-                                containerColor =
-                                    OrderGreen
-
-                            )
-
-                    ){
-
-
-                        Text(
-                            "Accept Order"
+                            tint =
+                                ProductScreenGreen
                         )
-
-
                     }
-
-
                 }
-
-
-
-
-
-                "Active" -> {
-
-
-
-                    Button(
-
-                        onClick =
-                            onDelivered,
-
-
-                        colors =
-                            ButtonDefaults.buttonColors(
-
-                                containerColor =
-                                    Color(0xFFFFA726)
-
-                            )
-
-                    ){
-
-
-                        Text(
-                            "Mark Delivered"
-                        )
-
-
-                    }
-
-
-
-                }
-
-
-
             }
 
+            Column(
+                modifier =
+                    Modifier.weight(1f)
+            ) {
+                Text(
+                    text = product.name,
 
+                    fontSize = 17.sp,
 
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                Text(
+                    text =
+                        "RM %.2f".format(
+                            product.price
+                        ),
+
+                    color =
+                        ProductScreenGreen,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                Text(
+                    text =
+                        "Category: ${product.category}",
+
+                    fontSize =
+                        13.sp
+                )
+
+                Text(
+                    text =
+                        "Stock: ${product.stock}",
+
+                    fontSize =
+                        13.sp
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            8.dp
+                        )
+                )
+
+                Row(
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            8.dp
+                        )
+                ) {
+                    Button(
+                        onClick = onEdit,
+
+                        colors =
+                            ButtonDefaults
+                                .buttonColors(
+                                    containerColor =
+                                        Color(
+                                            0xFFE8F5EC
+                                        )
+                                )
+                    ) {
+                        Icon(
+                            imageVector =
+                                Icons.Default
+                                    .Edit,
+
+                            contentDescription =
+                                "Edit product",
+
+                            tint =
+                                ProductScreenGreen
+                        )
+                    }
+
+                    Spacer(
+                        modifier =
+                            Modifier.width(
+                                2.dp
+                            )
+                    )
+
+                    Button(
+                        onClick = onRemove,
+
+                        colors =
+                            ButtonDefaults
+                                .buttonColors(
+                                    containerColor =
+                                        Color.Red
+                                )
+                    ) {
+                        Icon(
+                            imageVector =
+                                Icons.Default
+                                    .Delete,
+
+                            contentDescription =
+                                "Remove product",
+
+                            tint =
+                                Color.White
+                        )
+                    }
+                }
+            }
         }
-
-
-
     }
-
-
-
 }

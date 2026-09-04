@@ -1,10 +1,10 @@
 package com.example.githubdemo.screen.userprofile
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,405 +12,523 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.githubdemo.data.AppData
-import com.example.githubdemo.data.UserRole
-import com.example.githubdemo.ui.theme.ForestGreen
-import com.example.githubdemo.ui.theme.MainText
-import com.example.githubdemo.ui.theme.PageBackground
 import com.example.githubdemo.ui.theme.PrimaryGreen
-import com.example.githubdemo.ui.theme.SecondaryText
+import com.example.githubdemo.viewmodel.userprofile.CustomerOrderViewModel
 import com.example.githubdemo.viewmodel.userprofile.ProfileViewModel
+
+private enum class BuyerProfilePage {
+    MAIN,
+    INFORMATION,
+    EDIT,
+    ORDERS,
+    HELP,
+    PRIVACY,
+    CHANGE_PASSWORD
+}
+
+object BuyerProfileEntry {
+
+    private var requestedPage =
+        BuyerProfilePage.MAIN
+
+    fun openOrders() {
+        requestedPage =
+            BuyerProfilePage.ORDERS
+    }
+
+    internal fun takeRequestedPage(): String {
+        val page = requestedPage
+
+        requestedPage =
+            BuyerProfilePage.MAIN
+
+        return page.name
+    }
+}
 
 @Composable
 fun ProfileScreen(
     onNavigate: (String) -> Unit,
-
-    profileViewModel:
-    ProfileViewModel = viewModel()
+    profileViewModel: ProfileViewModel =
+        viewModel(),
+    orderViewModel: CustomerOrderViewModel =
+        viewModel()
 ) {
+    var pageName by rememberSaveable {
+        mutableStateOf(
+            BuyerProfilePage.MAIN.name
+        )
+    }
+
     LaunchedEffect(Unit) {
+        pageName =
+            BuyerProfileEntry.takeRequestedPage()
+
         profileViewModel.loadProfile()
     }
+
+    val page =
+        BuyerProfilePage.entries
+            .firstOrNull {
+                it.name == pageName
+            }
+            ?: BuyerProfilePage.MAIN
+
+    BackHandler(
+        enabled =
+            page != BuyerProfilePage.MAIN
+    ) {
+        pageName = when (page) {
+            BuyerProfilePage.EDIT ->
+                BuyerProfilePage
+                    .INFORMATION.name
+
+            BuyerProfilePage.CHANGE_PASSWORD ->
+                BuyerProfilePage
+                    .PRIVACY.name
+
+            else ->
+                BuyerProfilePage.MAIN.name
+        }
+    }
+
+    when (page) {
+        BuyerProfilePage.MAIN -> {
+            BuyerProfileMainScreen(
+                onOpenInformation = {
+                    pageName =
+                        BuyerProfilePage
+                            .INFORMATION.name
+                },
+                onOpenOrders = {
+                    pageName =
+                        BuyerProfilePage
+                            .ORDERS.name
+                },
+                onOpenHelp = {
+                    pageName =
+                        BuyerProfilePage
+                            .HELP.name
+                },
+                onOpenPrivacy = {
+                    pageName =
+                        BuyerProfilePage
+                            .PRIVACY.name
+                },
+                onNavigate = onNavigate,
+                profileViewModel =
+                    profileViewModel
+            )
+        }
+
+        BuyerProfilePage.INFORMATION -> {
+            ProfileInformationScreen(
+                onBack = {
+                    pageName =
+                        BuyerProfilePage.MAIN.name
+                },
+                onEditClick = {
+                    pageName =
+                        BuyerProfilePage.EDIT.name
+                },
+                profileViewModel =
+                    profileViewModel
+            )
+        }
+
+        BuyerProfilePage.EDIT -> {
+            EditProfileScreen(
+                onBack = {
+                    pageName =
+                        BuyerProfilePage
+                            .INFORMATION.name
+                },
+                onSave = {
+                    pageName =
+                        BuyerProfilePage
+                            .INFORMATION.name
+                },
+                profileViewModel =
+                    profileViewModel
+            )
+        }
+
+        BuyerProfilePage.ORDERS -> {
+            MyOrderScreen(
+                onBack = {
+                    pageName =
+                        BuyerProfilePage.MAIN.name
+                },
+                orderViewModel =
+                    orderViewModel
+            )
+        }
+
+        BuyerProfilePage.HELP -> {
+            HelpSupportScreen(
+                onBack = {
+                    pageName =
+                        BuyerProfilePage.MAIN.name
+                }
+            )
+        }
+
+        BuyerProfilePage.PRIVACY -> {
+            PrivacySecurityScreen(
+                onBack = {
+                    pageName =
+                        BuyerProfilePage.MAIN.name
+                },
+                onChangePassword = {
+                    pageName =
+                        BuyerProfilePage
+                            .CHANGE_PASSWORD.name
+                }
+            )
+        }
+
+        BuyerProfilePage.CHANGE_PASSWORD -> {
+            ChangePasswordScreen(
+                onBack = {
+                    pageName =
+                        BuyerProfilePage
+                            .PRIVACY.name
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun BuyerProfileMainScreen(
+    onOpenInformation: () -> Unit,
+    onOpenOrders: () -> Unit,
+    onOpenHelp: () -> Unit,
+    onOpenPrivacy: () -> Unit,
+    onNavigate: (String) -> Unit,
+    profileViewModel: ProfileViewModel
+) {
+    val profile by
+    profileViewModel.profile
+        .collectAsState()
+
+    val isLoading by
+    profileViewModel.isLoading
+        .collectAsState()
+
+    val message by
+    profileViewModel.message
+        .collectAsState()
+
+    val messageIsError by
+    profileViewModel.messageIsError
+        .collectAsState()
+
+    val menuItems = listOf(
+        ProfileMenuItem(
+            Icons.Default.Person,
+            "Profile Information",
+            onOpenInformation
+        ),
+        ProfileMenuItem(
+            Icons.Default.Inventory2,
+            "My Orders",
+            onOpenOrders
+        ),
+        ProfileMenuItem(
+            Icons.Default.Favorite,
+            "Favourite"
+        ) {
+            onNavigate("meal_favourites")
+        },
+        ProfileMenuItem(
+            Icons.Default.Inventory,
+            "Food Box Management"
+        ) {
+            onNavigate(
+                AppData.FOOD_BOX_MANAGE_ROUTE
+            )
+        },
+        ProfileMenuItem(
+            Icons.Default.Help,
+            "Help & Support",
+            onOpenHelp
+        ),
+        ProfileMenuItem(
+            Icons.Default.Security,
+            "Privacy & Security",
+            onOpenPrivacy
+        ),
+        ProfileMenuItem(
+            Icons.Default.Logout,
+            "Logout"
+        ) {
+            onNavigate(
+                AppData.ROLE_SELECTION_ROUTE
+            )
+        }
+    )
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(PageBackground),
-
-        contentPadding =
-            PaddingValues(bottom = 28.dp)
+            .background(
+                Color(0xFFF4F6EE)
+            )
     ) {
         item {
-            ProfileHeader()
-        }
-
-        item {
-            when {
-                profileViewModel.isLoading &&
-                        profileViewModel.profile ==
-                        null -> {
-
+            Surface(
+                color = PrimaryGreen,
+                shape = RoundedCornerShape(
+                    bottomStart = 35.dp,
+                    bottomEnd = 35.dp
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top = 40.dp,
+                            bottom = 30.dp
+                        ),
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally
+                ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(48.dp),
-
+                            .size(90.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
                         contentAlignment =
                             Alignment.Center
                     ) {
-                        CircularProgressIndicator(
-                            color = PrimaryGreen
+                        Icon(
+                            imageVector =
+                                Icons.Default.Person,
+                            contentDescription = null,
+                            tint = PrimaryGreen,
+                            modifier =
+                                Modifier.size(50.dp)
                         )
                     }
-                }
 
-                profileViewModel.profile !=
-                        null -> {
+                    Spacer(Modifier.height(12.dp))
 
-                    val profile =
-                        profileViewModel.profile!!
+                    Text(
+                        text =
+                            profile?.fullName
+                                ?: "User",
+                        color = Color.White,
+                        style =
+                            MaterialTheme.typography
+                                .headlineSmall
+                    )
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-
-                        verticalArrangement =
-                            Arrangement
-                                .spacedBy(14.dp)
-                    ) {
-                        if (
-                            profileViewModel
-                                .isUsingLocalData
-                        ) {
-                            Text(
-                                text =
-                                    "Offline copy from local storage",
-
-                                color =
-                                    Color(0xFF9A5A00),
-
-                                fontSize = 13.sp
-                            )
-                        }
-
-                        Text(
-                            text = profile.fullName,
-
-                            color = MainText,
-
-                            fontSize = 25.sp,
-
-                            fontWeight =
-                                FontWeight.Bold
-                        )
-
-                        Text(
-                            text =
-                                UserRole.getRoleName(
-                                    profile.userRole
-                                ),
-
-                            color = PrimaryGreen,
-
-                            fontSize = 15.sp,
-
-                            fontWeight =
-                                FontWeight.SemiBold
-                        )
-
-                        ProfileInformationCard(
-                            icon =
-                                Icons.Outlined.Email,
-
-                            label =
-                                "Email Address",
-
-                            value = profile.email
-                        )
-
-                        ProfileInformationCard(
-                            icon =
-                                Icons.Outlined.Phone,
-
-                            label =
-                                "Phone Number",
-
-                            value =
-                                profile.phoneNumber
-                        )
-
-                        ProfileInformationCard(
-                            icon =
-                                Icons.Outlined.Home,
-
-                            label =
-                                UserRole
-                                    .getAdditionalFieldLabel(
-                                        profile.userRole
-                                    ),
-
-                            value =
-                                profile
-                                    .additionalInformation
-                        )
-
-                        OutlinedButton(
-                            onClick = {
-                                profileViewModel
-                                    .loadProfile()
-                            },
-
-                            modifier =
-                                Modifier.fillMaxWidth(),
-
-                            shape =
-                                RoundedCornerShape(
-                                    16.dp
-                                )
-                        ) {
-                            Text(
-                                "Refresh Cloud Profile"
-                            )
-                        }
-
-                        Button(
-                            onClick = {
-                                onNavigate(
-                                    AppData
-                                        .ROLE_SELECTION_ROUTE
-                                )
-                            },
-
-                            modifier =
-                                Modifier.fillMaxWidth(),
-
-                            shape =
-                                RoundedCornerShape(
-                                    16.dp
-                                ),
-
-                            colors =
-                                ButtonDefaults
-                                    .buttonColors(
-                                        containerColor =
-                                            ForestGreen
-                                    ),
-
-                            contentPadding =
-                                PaddingValues(
-                                    vertical = 14.dp
-                                )
-                        ) {
-                            Text(
-                                text =
-                                    "Sign Out and Change Role",
-
-                                fontWeight =
-                                    FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                else -> {
-                    ErrorProfileCard(
-                        message =
-                            profileViewModel
-                                .errorMessage,
-
-                        onRetry = {
-                            profileViewModel
-                                .loadProfile()
-                        }
+                    Text(
+                        text =
+                            profile?.email
+                                .orEmpty(),
+                        color = Color.White
                     )
                 }
             }
         }
-    }
-}
 
-@Composable
-fun ProfileHeader() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = ForestGreen,
-
-                shape = RoundedCornerShape(
-                    bottomStart = 34.dp,
-                    bottomEnd = 34.dp
-                )
-            )
-            .statusBarsPadding()
-            .padding(24.dp),
-
-        horizontalAlignment =
-            Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(82.dp)
-                .background(
-                    color = Color(0xFF3F8269),
-                    shape = CircleShape
-                ),
-
-            contentAlignment = Alignment.Center
+        if (
+            isLoading &&
+            profile == null
         ) {
-            Icon(
-                imageVector =
-                    Icons.Outlined.Person,
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(36.dp),
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = PrimaryGreen
+                    )
+                }
+            }
+        }
 
-                contentDescription =
-                    "User profile",
+        if (message.isNotBlank()) {
+            item {
+                Text(
+                    text = message,
+                    color =
+                        if (messageIsError) {
+                            MaterialTheme
+                                .colorScheme.error
+                        } else {
+                            PrimaryGreen
+                        },
+                    modifier =
+                        Modifier.padding(16.dp)
+                )
+            }
+        }
 
-                tint = Color.White,
-
-                modifier =
-                    Modifier.size(42.dp)
+        items(menuItems) { item ->
+            ProfileItem(
+                icon = item.icon,
+                title = item.title,
+                onClick = item.onClick
             )
         }
 
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
-
-        Text(
-            text = "My Profile",
-            color = Color.White,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            text =
-                "Cloud profile with local backup",
-
-            color = Color(0xFFC6D9D1),
-
-            fontSize = 14.sp
-        )
+        item {
+            Spacer(Modifier.height(24.dp))
+        }
     }
 }
 
+private data class ProfileMenuItem(
+    val icon: ImageVector,
+    val title: String,
+    val onClick: () -> Unit
+)
+
 @Composable
-fun ProfileInformationCard(
+private fun ProfileItem(
     icon: ImageVector,
-    label: String,
-    value: String
+    title: String,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = 16.dp,
+                vertical = 6.dp
+            ),
         shape = RoundedCornerShape(18.dp),
-
         colors = CardDefaults.cardColors(
             containerColor = Color.White
-        ),
-
-        elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 2.dp
-            )
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(18.dp),
-
             verticalAlignment =
-                Alignment.CenterVertically
+                Alignment.CenterVertically,
+            horizontalArrangement =
+                Arrangement.SpaceBetween
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = PrimaryGreen,
-                modifier = Modifier.size(26.dp)
-            )
-
-            Column(
-                modifier =
-                    Modifier.padding(start = 16.dp)
+            Row(
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
-                Text(
-                    text = label,
-                    color = SecondaryText,
-                    fontSize = 13.sp
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = PrimaryGreen
                 )
 
                 Text(
-                    text = value,
-                    color = MainText,
-                    fontSize = 16.sp,
-                    fontWeight =
-                        FontWeight.SemiBold
+                    text = title,
+                    modifier =
+                        Modifier.padding(
+                            start = 16.dp
+                        ),
+                    style =
+                        MaterialTheme.typography
+                            .titleMedium
                 )
             }
+
+            Icon(
+                imageVector =
+                    Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color.Gray
+            )
         }
     }
 }
 
 @Composable
-fun ErrorProfileCard(
-    message: String,
-    onRetry: () -> Unit
+internal fun BuyerProfilePageHeader(
+    title: String,
+    onBack: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-
-        horizontalAlignment =
-            Alignment.CenterHorizontally
+    Surface(
+        color = PrimaryGreen,
+        shape = RoundedCornerShape(
+            bottomStart = 30.dp,
+            bottomEnd = 30.dp
+        )
     ) {
-        Text(
-            text = message,
-            color = Color(0xFFB3261E)
-        )
-
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
-
-        Button(
-            onClick = onRetry,
-
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor =
-                        PrimaryGreen
-                )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    top = 32.dp,
+                    bottom = 18.dp,
+                    start = 6.dp,
+                    end = 16.dp
+                ),
+            verticalAlignment =
+                Alignment.CenterVertically
         ) {
-            Text("Try Again")
+            IconButton(
+                onClick = onBack
+            ) {
+                Icon(
+                    imageVector =
+                        Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White
+                )
+            }
+
+            Text(
+                text = title,
+                color = Color.White,
+                style =
+                    MaterialTheme.typography
+                        .headlineSmall
+            )
         }
     }
 }

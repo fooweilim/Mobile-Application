@@ -1,4 +1,4 @@
-package com.example.githubdemo.screen.farmer
+package com.example.githubdemo.screen.farmer.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -18,35 +18,53 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.githubdemo.nav.FarmerRoute
 
-private val FarmerGreen =
+private val FarmerNavigationGreen =
     Color(0xFF28785B)
+
+private const val DASHBOARD_ROUTE =
+    "dashboard"
+
+private const val PRODUCTS_ROUTE =
+    "products"
+
+private const val ADD_PRODUCT_ROUTE =
+    "addProduct"
+
+private const val ORDERS_ROUTE =
+    "orders"
+
+private const val PROFILE_ROUTE =
+    "profile"
 
 @Composable
 fun FarmerBottomBar(
-    currentRoute: String,
+    current: String,
     onNavigate: (String) -> Unit
 ) {
     NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 5.dp
+        containerColor =
+            Color.White,
+
+        tonalElevation =
+            5.dp
     ) {
         NavigationBarItem(
             selected =
-                currentRoute ==
-                        FarmerRoute.DASHBOARD,
+                current ==
+                        DASHBOARD_ROUTE,
 
             onClick = {
                 onNavigate(
-                    FarmerRoute.DASHBOARD
+                    DASHBOARD_ROUTE
                 )
             },
 
             icon = {
                 Icon(
                     imageVector =
-                        Icons.Default.BarChart,
+                        Icons.Default
+                            .BarChart,
 
                     contentDescription =
                         "Dashboard"
@@ -54,25 +72,28 @@ fun FarmerBottomBar(
             },
 
             label = {
-                Text("Dashboard")
+                Text(
+                    text = "Dashboard"
+                )
             }
         )
 
         NavigationBarItem(
             selected =
-                currentRoute ==
-                        FarmerRoute.PRODUCTS,
+                current ==
+                        PRODUCTS_ROUTE,
 
             onClick = {
                 onNavigate(
-                    FarmerRoute.PRODUCTS
+                    PRODUCTS_ROUTE
                 )
             },
 
             icon = {
                 Icon(
                     imageVector =
-                        Icons.Default.Inventory,
+                        Icons.Default
+                            .Inventory,
 
                     contentDescription =
                         "Products"
@@ -80,7 +101,9 @@ fun FarmerBottomBar(
             },
 
             label = {
-                Text("Products")
+                Text(
+                    text = "Products"
+                )
             }
         )
 
@@ -95,12 +118,12 @@ fun FarmerBottomBar(
             FloatingActionButton(
                 onClick = {
                     onNavigate(
-                        FarmerRoute.ADD_PRODUCT
+                        ADD_PRODUCT_ROUTE
                     )
                 },
 
                 containerColor =
-                    FarmerGreen,
+                    FarmerNavigationGreen,
 
                 contentColor =
                     Color.White
@@ -117,19 +140,20 @@ fun FarmerBottomBar(
 
         NavigationBarItem(
             selected =
-                currentRoute ==
-                        FarmerRoute.ORDERS,
+                current ==
+                        ORDERS_ROUTE,
 
             onClick = {
                 onNavigate(
-                    FarmerRoute.ORDERS
+                    ORDERS_ROUTE
                 )
             },
 
             icon = {
                 Icon(
                     imageVector =
-                        Icons.Default.LocalShipping,
+                        Icons.Default
+                            .LocalShipping,
 
                     contentDescription =
                         "Orders"
@@ -137,25 +161,28 @@ fun FarmerBottomBar(
             },
 
             label = {
-                Text("Orders")
+                Text(
+                    text = "Orders"
+                )
             }
         )
 
         NavigationBarItem(
             selected =
-                currentRoute ==
-                        FarmerRoute.PROFILE,
+                current ==
+                        PROFILE_ROUTE,
 
             onClick = {
                 onNavigate(
-                    FarmerRoute.PROFILE
+                    PROFILE_ROUTE
                 )
             },
 
             icon = {
                 Icon(
                     imageVector =
-                        Icons.Default.Person,
+                        Icons.Default
+                            .Person,
 
                     contentDescription =
                         "Profile"
@@ -163,7 +190,9 @@ fun FarmerBottomBar(
             },
 
             label = {
-                Text("Profile")
+                Text(
+                    text = "Profile"
+                )
             }
         )
     }

@@ -471,10 +471,12 @@ fun AppNavGraph(
                                 inclusive = true
                             }
                         }
-                    }
+                    },
+
+                    cartViewModel =
+                        cartViewModel
                 )
             }
-
             composable(
                 route =
                     AppData.FOOD_BOX_ROUTE

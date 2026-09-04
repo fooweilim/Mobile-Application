@@ -1,19 +1,40 @@
 package com.example.githubdemo.screen.farmer
 
-
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,8 +43,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.githubdemo.model.market.Product
-import com.example.githubdemo.supabase.FarmerProductRepository
+import com.example.githubdemo.model.farmer.Product
+import com.example.githubdemo.repository.farmer.ProductFarmerRepository
 import kotlinx.coroutines.launch
 
 private val AddProductGreen =
@@ -32,6 +53,12 @@ private val AddProductGreen =
 private val AddProductBackground =
     Color(0xFFF8F5ED)
 
+private const val PRICE_PATTERN =
+    "^\\d*(\\.\\d{0,2})?$"
+
+private const val STOCK_PATTERN =
+    "^\\d+$"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddProductScreen(
@@ -39,10 +66,10 @@ fun AddProductScreen(
     onProductAdded: () -> Unit
 ) {
     val repository = remember {
-        FarmerProductRepository()
+        ProductFarmerRepository()
     }
 
-    val scope =
+    val coroutineScope =
         rememberCoroutineScope()
 
     var productName by remember {
@@ -83,11 +110,7 @@ fun AddProductScreen(
                 ActivityResultContracts
                     .TakePicturePreview()
         ) { bitmap ->
-
-            if (bitmap != null) {
-                imageBitmap = bitmap
-                errorMessage = ""
-            }
+            imageBitmap = bitmap
         }
 
     Scaffold(
@@ -99,7 +122,6 @@ fun AddProductScreen(
                 title = {
                     Text(
                         text = "Add Product",
-
                         fontWeight =
                             FontWeight.Bold
                     )
@@ -121,11 +143,10 @@ fun AddProductScreen(
                 }
             )
         }
-    ) { paddingValues ->
-
+    ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(paddingValues)
+                .padding(innerPadding)
                 .padding(20.dp)
                 .fillMaxSize()
                 .verticalScroll(
@@ -133,19 +154,25 @@ fun AddProductScreen(
                 ),
 
             verticalArrangement =
-                Arrangement.spacedBy(15.dp)
+                Arrangement.spacedBy(
+                    15.dp
+                )
         ) {
             Card(
-                onClick = {
-                    cameraLauncher.launch(null)
-                },
-
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(180.dp),
 
                 shape =
-                    RoundedCornerShape(20.dp)
+                    RoundedCornerShape(
+                        20.dp
+                    ),
+
+                onClick = {
+                    cameraLauncher.launch(
+                        null
+                    )
+                }
             ) {
                 Box(
                     modifier =
@@ -154,17 +181,17 @@ fun AddProductScreen(
                     contentAlignment =
                         Alignment.Center
                 ) {
-                    val selectedImage =
+                    val selectedBitmap =
                         imageBitmap
 
-                    if (selectedImage != null) {
+                    if (selectedBitmap != null) {
                         Image(
                             bitmap =
-                                selectedImage
+                                selectedBitmap
                                     .asImageBitmap(),
 
                             contentDescription =
-                                "Selected product photo",
+                                "Selected product image",
 
                             modifier =
                                 Modifier.fillMaxSize(),
@@ -184,18 +211,15 @@ fun AddProductScreen(
                                         .AddPhotoAlternate,
 
                                 contentDescription =
-                                    null,
+                                    "Open camera",
 
                                 tint =
                                     AddProductGreen,
 
                                 modifier =
-                                    Modifier.size(45.dp)
-                            )
-
-                            Spacer(
-                                modifier =
-                                    Modifier.height(6.dp)
+                                    Modifier.size(
+                                        45.dp
+                                    )
                             )
 
                             Text(
@@ -219,7 +243,10 @@ fun AddProductScreen(
                 },
 
                 label = {
-                    Text("Product Name")
+                    Text(
+                        text =
+                            "Product Name"
+                    )
                 },
 
                 modifier =
@@ -237,7 +264,9 @@ fun AddProductScreen(
                 },
 
                 label = {
-                    Text("Category")
+                    Text(
+                        text = "Category"
+                    )
                 },
 
                 modifier =
@@ -252,24 +281,40 @@ fun AddProductScreen(
                 onValueChange = {
                         newValue ->
 
-                    if (
+                    when {
+                        newValue.isEmpty() -> {
+                            price = ""
+                            errorMessage = ""
+                        }
+
                         newValue.matches(
                             Regex(
-                                "^\\d*(\\.\\d{0,2})?$"
+                                PRICE_PATTERN
                             )
-                        )
-                    ) {
-                        price = newValue
-                        errorMessage = ""
+                        ) -> {
+                            price = newValue
+                            errorMessage = ""
+                        }
+
+                        else -> {
+                            errorMessage =
+                                "Price only allows numbers with a maximum of 2 decimal places."
+                        }
                     }
                 },
 
                 label = {
-                    Text("Price")
+                    Text(
+                        text =
+                            "Price (RM)"
+                    )
                 },
 
                 placeholder = {
-                    Text("Example: 2.50")
+                    Text(
+                        text =
+                            "Example: 2.50"
+                    )
                 },
 
                 modifier =
@@ -284,25 +329,39 @@ fun AddProductScreen(
                 onValueChange = {
                         newValue ->
 
-                    if (
-                        newValue.isEmpty() ||
-                        newValue.all {
-                                character ->
-
-                            character.isDigit()
+                    when {
+                        newValue.isEmpty() -> {
+                            stock = ""
+                            errorMessage = ""
                         }
-                    ) {
-                        stock = newValue
-                        errorMessage = ""
+
+                        newValue.matches(
+                            Regex(
+                                STOCK_PATTERN
+                            )
+                        ) -> {
+                            stock = newValue
+                            errorMessage = ""
+                        }
+
+                        else -> {
+                            errorMessage =
+                                "Stock only allows whole numbers."
+                        }
                     }
                 },
 
                 label = {
-                    Text("Stock")
+                    Text(
+                        text = "Stock"
+                    )
                 },
 
                 placeholder = {
-                    Text("Example: 100")
+                    Text(
+                        text =
+                            "Example: 100"
+                    )
                 },
 
                 modifier =
@@ -316,11 +375,13 @@ fun AddProductScreen(
 
                 onValueChange = {
                     description = it
+                    errorMessage = ""
                 },
 
                 label = {
                     Text(
-                        "Description (Optional)"
+                        text =
+                            "Description (Optional)"
                     )
                 },
 
@@ -329,13 +390,12 @@ fun AddProductScreen(
                     .height(120.dp)
             )
 
-            if (errorMessage.isNotEmpty()) {
+            if (
+                errorMessage.isNotEmpty()
+            ) {
                 Text(
                     text = errorMessage,
-
-                    color =
-                        Color(0xFFB3261E),
-
+                    color = Color.Red,
                     fontSize = 13.sp
                 )
             }
@@ -344,102 +404,108 @@ fun AddProductScreen(
                 enabled = !isLoading,
 
                 onClick = {
-                    val parsedPrice =
+                    if (
+                        productName.isBlank() ||
+                        category.isBlank() ||
+                        price.isBlank() ||
+                        stock.isBlank()
+                    ) {
+                        errorMessage =
+                            "Please fill in all required fields."
+
+                        return@Button
+                    }
+
+                    val productPrice =
                         price.toDoubleOrNull()
 
-                    val parsedStock =
+                    if (
+                        productPrice == null ||
+                        productPrice <= 0.0
+                    ) {
+                        errorMessage =
+                            "Please enter a valid price."
+
+                        return@Button
+                    }
+
+                    val productStock =
                         stock.toIntOrNull()
 
-                    when {
-                        productName.isBlank() ||
-                                category.isBlank() ||
-                                price.isBlank() ||
-                                stock.isBlank() -> {
+                    if (
+                        productStock == null ||
+                        productStock < 0
+                    ) {
+                        errorMessage =
+                            "Please enter a valid stock quantity."
 
+                        return@Button
+                    }
+
+                    val selectedBitmap =
+                        imageBitmap
+
+                    if (
+                        selectedBitmap == null
+                    ) {
+                        errorMessage =
+                            "Please add a product photo."
+
+                        return@Button
+                    }
+
+                    coroutineScope.launch {
+                        isLoading = true
+                        errorMessage = ""
+
+                        try {
+                            val imageUrl =
+                                repository
+                                    .uploadProductImage(
+                                        bitmap =
+                                            selectedBitmap,
+
+                                        fileName =
+                                            "product_${System.currentTimeMillis()}.jpg"
+                                    )
+
+                            repository.addProduct(
+                                Product(
+                                    name =
+                                        productName
+                                            .trim(),
+
+                                    category =
+                                        category
+                                            .trim(),
+
+                                    price =
+                                        productPrice,
+
+                                    stock =
+                                        productStock,
+
+                                    description =
+                                        description
+                                            .trim(),
+
+                                    image_url =
+                                        imageUrl,
+
+                                    status =
+                                        "ACTIVE"
+                                )
+                            )
+
+                            onProductAdded()
+                        } catch (
+                            exception: Exception
+                        ) {
                             errorMessage =
-                                "Please fill in all required fields."
-                        }
-
-                        parsedPrice == null ||
-                                parsedPrice <= 0.0 -> {
-
-                            errorMessage =
-                                "Enter a price greater than 0."
-                        }
-
-                        parsedStock == null ||
-                                parsedStock < 0 -> {
-
-                            errorMessage =
-                                "Enter a valid whole-number stock."
-                        }
-
-                        imageBitmap == null -> {
-                            errorMessage =
-                                "Please add a product photo."
-                        }
-
-                        else -> {
-                            scope.launch {
-                                isLoading = true
-                                errorMessage = ""
-
-                                try {
-                                    val imageUrl =
-                                        repository
-                                            .uploadProductImage(
-                                                bitmap =
-                                                    imageBitmap!!,
-
-                                                fileName =
-                                                    "product_${System.currentTimeMillis()}.jpg"
-                                            )
-
-                                    repository
-                                        .addProduct(
-                                            Product(
-                                                farmer_id =
-                                                    null,
-
-                                                name =
-                                                    productName
-                                                        .trim(),
-
-                                                category =
-                                                    category
-                                                        .trim(),
-
-                                                price =
-                                                    parsedPrice,
-
-                                                stock =
-                                                    parsedStock,
-
-                                                description =
-                                                    description
-                                                        .trim(),
-
-                                                image_url =
-                                                    imageUrl,
-
-                                                status =
-                                                    "Available"
-                                            )
-                                        )
-
-                                    onProductAdded()
-                                } catch (
-                                    exception:
-                                    Exception
-                                ) {
-                                    errorMessage =
-                                        exception
-                                            .message
-                                            ?: "Unable to add product."
-                                } finally {
-                                    isLoading = false
-                                }
-                            }
+                                exception.message
+                                    ?: "Unable to add product."
+                        } finally {
+                            isLoading = false
                         }
                     }
                 },
@@ -449,7 +515,9 @@ fun AddProductScreen(
                     .height(55.dp),
 
                 shape =
-                    RoundedCornerShape(30.dp),
+                    RoundedCornerShape(
+                        30.dp
+                    ),
 
                 colors =
                     ButtonDefaults
@@ -461,15 +529,19 @@ fun AddProductScreen(
                 if (isLoading) {
                     CircularProgressIndicator(
                         color = Color.White,
-                        strokeWidth = 2.dp,
 
                         modifier =
-                            Modifier.size(22.dp)
+                            Modifier.size(
+                                22.dp
+                            )
                     )
                 } else {
                     Text(
-                        text = "List Product",
-                        fontSize = 16.sp
+                        text =
+                            "List Product",
+
+                        fontSize =
+                            16.sp
                     )
                 }
             }

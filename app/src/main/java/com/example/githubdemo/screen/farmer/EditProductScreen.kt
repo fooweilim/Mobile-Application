@@ -1,19 +1,41 @@
 package com.example.githubdemo.screen.farmer
 
-
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,8 +45,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.githubdemo.model.market.Product
-import com.example.githubdemo.supabase.FarmerProductRepository
+import com.example.githubdemo.model.farmer.Product
+import com.example.githubdemo.repository.farmer.ProductFarmerRepository
 import kotlinx.coroutines.launch
 
 private val EditProductGreen =
@@ -32,6 +54,12 @@ private val EditProductGreen =
 
 private val EditProductBackground =
     Color(0xFFF8F5ED)
+
+private const val EDIT_PRICE_PATTERN =
+    "^\\d*(\\.\\d{0,2})?$"
+
+private const val EDIT_STOCK_PATTERN =
+    "^\\d+$"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,10 +69,10 @@ fun EditProductScreen(
     onUpdated: () -> Unit
 ) {
     val repository = remember {
-        FarmerProductRepository()
+        ProductFarmerRepository()
     }
 
-    val scope =
+    val coroutineScope =
         rememberCoroutineScope()
 
     var product by remember {
@@ -93,15 +121,12 @@ fun EditProductScreen(
                 ActivityResultContracts
                     .TakePicturePreview()
         ) { bitmap ->
-
-            if (bitmap != null) {
-                imageBitmap = bitmap
-                errorMessage = ""
-            }
+            imageBitmap = bitmap
         }
 
     LaunchedEffect(productId) {
         isLoading = true
+        errorMessage = ""
 
         try {
             val loadedProduct =
@@ -110,31 +135,33 @@ fun EditProductScreen(
                         productId
                     )
 
-            if (loadedProduct == null) {
-                errorMessage =
-                    "This product could not be found."
-            } else {
-                product = loadedProduct
-                name = loadedProduct.name
+            product = loadedProduct
+
+            if (loadedProduct != null) {
+                name =
+                    loadedProduct.name
+
                 category =
                     loadedProduct.category
 
                 price =
-                    loadedProduct
-                        .price
+                    loadedProduct.price
                         .toString()
 
                 stock =
-                    loadedProduct
-                        .stock
+                    loadedProduct.stock
                         .toString()
 
                 description =
-                    loadedProduct
-                        .description
+                    loadedProduct.description
                         .orEmpty()
+            } else {
+                errorMessage =
+                    "Product was not found."
             }
-        } catch (exception: Exception) {
+        } catch (
+            exception: Exception
+        ) {
             errorMessage =
                 exception.message
                     ?: "Unable to load product."
@@ -151,7 +178,8 @@ fun EditProductScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Edit Product",
+                        text =
+                            "Edit Product",
 
                         fontWeight =
                             FontWeight.Bold
@@ -174,13 +202,14 @@ fun EditProductScreen(
                 }
             )
         }
-    ) { paddingValues ->
-
+    ) { innerPadding ->
         when {
             isLoading -> {
                 Box(
                     modifier = Modifier
-                        .padding(paddingValues)
+                        .padding(
+                            innerPadding
+                        )
                         .fillMaxSize(),
 
                     contentAlignment =
@@ -196,53 +225,78 @@ fun EditProductScreen(
             product == null -> {
                 Box(
                     modifier = Modifier
-                        .padding(paddingValues)
-                        .fillMaxSize()
-                        .padding(24.dp),
+                        .padding(
+                            innerPadding
+                        )
+                        .fillMaxSize(),
 
                     contentAlignment =
                         Alignment.Center
                 ) {
-                    Text(
-                        text = errorMessage,
+                    Column(
+                        horizontalAlignment =
+                            Alignment
+                                .CenterHorizontally
+                    ) {
+                        Text(
+                            text =
+                                errorMessage.ifBlank {
+                                    "Product was not found."
+                                },
 
-                        color =
-                            Color(0xFFB3261E)
-                    )
+                            color =
+                                Color.Red
+                        )
+
+                        Button(
+                            onClick = onBack
+                        ) {
+                            Text(
+                                text = "Go Back"
+                            )
+                        }
+                    }
                 }
             }
 
             else -> {
                 val currentProduct =
-                    product!!
+                    product ?: return@Scaffold
 
                 Column(
                     modifier = Modifier
-                        .padding(paddingValues)
-                        .padding(20.dp)
+                        .padding(
+                            innerPadding
+                        )
+                        .padding(
+                            20.dp
+                        )
                         .fillMaxSize()
                         .verticalScroll(
                             rememberScrollState()
                         ),
 
                     verticalArrangement =
-                        Arrangement
-                            .spacedBy(15.dp)
+                        Arrangement.spacedBy(
+                            15.dp
+                        )
                 ) {
                     Card(
-                        onClick = {
-                            cameraLauncher
-                                .launch(null)
-                        },
-
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp),
+                            .height(
+                                180.dp
+                            ),
 
                         shape =
                             RoundedCornerShape(
                                 20.dp
-                            )
+                            ),
+
+                        onClick = {
+                            cameraLauncher
+                                .launch(null)
+                        }
                     ) {
                         Box(
                             modifier =
@@ -252,20 +306,18 @@ fun EditProductScreen(
                             contentAlignment =
                                 Alignment.Center
                         ) {
-                            val selectedImage =
+                            val selectedBitmap =
                                 imageBitmap
 
                             when {
-                                selectedImage !=
-                                        null -> {
-
+                                selectedBitmap != null -> {
                                     Image(
                                         bitmap =
-                                            selectedImage
+                                            selectedBitmap
                                                 .asImageBitmap(),
 
                                         contentDescription =
-                                            "New product photo",
+                                            "New product image",
 
                                         modifier =
                                             Modifier
@@ -280,14 +332,14 @@ fun EditProductScreen(
                                 !currentProduct
                                     .image_url
                                     .isNullOrBlank() -> {
-
                                     AsyncImage(
                                         model =
                                             currentProduct
                                                 .image_url,
 
                                         contentDescription =
-                                            "Product photo",
+                                            currentProduct
+                                                .name,
 
                                         modifier =
                                             Modifier
@@ -306,14 +358,15 @@ fun EditProductScreen(
                                                 .AddPhotoAlternate,
 
                                         contentDescription =
-                                            "Add product photo",
+                                            "Add product image",
 
                                         tint =
                                             EditProductGreen,
 
                                         modifier =
-                                            Modifier
-                                                .size(50.dp)
+                                            Modifier.size(
+                                                50.dp
+                                            )
                                     )
                                 }
                             }
@@ -330,7 +383,8 @@ fun EditProductScreen(
 
                         label = {
                             Text(
-                                "Product Name"
+                                text =
+                                    "Product Name"
                             )
                         },
 
@@ -350,7 +404,10 @@ fun EditProductScreen(
                         },
 
                         label = {
-                            Text("Category")
+                            Text(
+                                text =
+                                    "Category"
+                            )
                         },
 
                         modifier =
@@ -366,20 +423,36 @@ fun EditProductScreen(
                         onValueChange = {
                                 newValue ->
 
-                            if (
+                            when {
+                                newValue.isEmpty() -> {
+                                    price = ""
+                                    errorMessage = ""
+                                }
+
                                 newValue.matches(
                                     Regex(
-                                        "^\\d*(\\.\\d{0,2})?$"
+                                        EDIT_PRICE_PATTERN
                                     )
-                                )
-                            ) {
-                                price = newValue
-                                errorMessage = ""
+                                ) -> {
+                                    price =
+                                        newValue
+
+                                    errorMessage =
+                                        ""
+                                }
+
+                                else -> {
+                                    errorMessage =
+                                        "Price only allows numbers with a maximum of 2 decimal places."
+                                }
                             }
                         },
 
                         label = {
-                            Text("Price")
+                            Text(
+                                text =
+                                    "Price (RM)"
+                            )
                         },
 
                         modifier =
@@ -395,23 +468,35 @@ fun EditProductScreen(
                         onValueChange = {
                                 newValue ->
 
-                            if (
-                                newValue
-                                    .isEmpty() ||
-                                newValue.all {
-                                        character ->
-
-                                    character
-                                        .isDigit()
+                            when {
+                                newValue.isEmpty() -> {
+                                    stock = ""
+                                    errorMessage = ""
                                 }
-                            ) {
-                                stock = newValue
-                                errorMessage = ""
+
+                                newValue.matches(
+                                    Regex(
+                                        EDIT_STOCK_PATTERN
+                                    )
+                                ) -> {
+                                    stock =
+                                        newValue
+
+                                    errorMessage =
+                                        ""
+                                }
+
+                                else -> {
+                                    errorMessage =
+                                        "Stock only allows whole numbers."
+                                }
                             }
                         },
 
                         label = {
-                            Text("Stock")
+                            Text(
+                                text = "Stock"
+                            )
                         },
 
                         modifier =
@@ -426,27 +511,36 @@ fun EditProductScreen(
 
                         onValueChange = {
                             description = it
+                            errorMessage = ""
                         },
 
                         label = {
-                            Text("Description")
+                            Text(
+                                text =
+                                    "Description"
+                            )
                         },
 
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(120.dp)
+                            .height(
+                                120.dp
+                            )
                     )
 
                     if (
-                        errorMessage.isNotEmpty()
+                        errorMessage
+                            .isNotEmpty()
                     ) {
                         Text(
-                            text = errorMessage,
+                            text =
+                                errorMessage,
 
                             color =
-                                Color(0xFFB3261E),
+                                Color.Red,
 
-                            fontSize = 13.sp
+                            fontSize =
+                                13.sp
                         )
                     }
 
@@ -454,119 +548,124 @@ fun EditProductScreen(
                         enabled = !isSaving,
 
                         onClick = {
-                            val parsedPrice =
-                                price
-                                    .toDoubleOrNull()
-
-                            val parsedStock =
-                                stock
-                                    .toIntOrNull()
-
-                            when {
+                            if (
                                 name.isBlank() ||
-                                        category
-                                            .isBlank() -> {
+                                category.isBlank() ||
+                                price.isBlank() ||
+                                stock.isBlank()
+                            ) {
+                                errorMessage =
+                                    "Please fill in all required fields."
 
-                                    errorMessage =
-                                        "Product name and category are required."
-                                }
+                                return@Button
+                            }
 
-                                parsedPrice ==
-                                        null ||
-                                        parsedPrice <=
-                                        0.0 -> {
+                            val productPrice =
+                                price.toDoubleOrNull()
 
-                                    errorMessage =
-                                        "Enter a price greater than 0."
-                                }
+                            if (
+                                productPrice == null ||
+                                productPrice <= 0.0
+                            ) {
+                                errorMessage =
+                                    "Please enter a valid price."
 
-                                parsedStock ==
-                                        null ||
-                                        parsedStock <
-                                        0 -> {
+                                return@Button
+                            }
 
-                                    errorMessage =
-                                        "Enter a valid whole-number stock."
-                                }
+                            val productStock =
+                                stock.toIntOrNull()
 
-                                else -> {
-                                    scope.launch {
-                                        isSaving = true
-                                        errorMessage =
-                                            ""
+                            if (
+                                productStock == null ||
+                                productStock < 0
+                            ) {
+                                errorMessage =
+                                    "Please enter a valid stock quantity."
 
-                                        try {
-                                            var imageUrl =
-                                                currentProduct
-                                                    .image_url
+                                return@Button
+                            }
 
-                                            val newImage =
-                                                imageBitmap
+                            coroutineScope.launch {
+                                isSaving = true
+                                errorMessage = ""
 
-                                            if (
-                                                newImage !=
-                                                null
-                                            ) {
-                                                imageUrl =
-                                                    repository
-                                                        .uploadProductImage(
-                                                            bitmap =
-                                                                newImage,
+                                try {
+                                    var imageUrl =
+                                        currentProduct
+                                            .image_url
 
-                                                            fileName =
-                                                                "product_$productId.jpg"
-                                                        )
-                                            }
+                                    val selectedBitmap =
+                                        imageBitmap
 
+                                    if (
+                                        selectedBitmap !=
+                                        null
+                                    ) {
+                                        imageUrl =
                                             repository
-                                                .updateProduct(
-                                                    productId =
-                                                        productId,
+                                                .uploadProductImage(
+                                                    bitmap =
+                                                        selectedBitmap,
 
-                                                    product =
-                                                        currentProduct
-                                                            .copy(
-                                                                name =
-                                                                    name.trim(),
-
-                                                                category =
-                                                                    category.trim(),
-
-                                                                price =
-                                                                    parsedPrice,
-
-                                                                stock =
-                                                                    parsedStock,
-
-                                                                description =
-                                                                    description.trim(),
-
-                                                                image_url =
-                                                                    imageUrl
-                                                            )
+                                                    fileName =
+                                                        "product_$productId.jpg"
                                                 )
-
-                                            onUpdated()
-                                        } catch (
-                                            exception:
-                                            Exception
-                                        ) {
-                                            errorMessage =
-                                                exception
-                                                    .message
-                                                    ?: "Unable to update product."
-                                        } finally {
-                                            isSaving =
-                                                false
-                                        }
                                     }
+
+                                    val updatedProduct =
+                                        currentProduct.copy(
+                                            name =
+                                                name.trim(),
+
+                                            category =
+                                                category
+                                                    .trim(),
+
+                                            price =
+                                                productPrice,
+
+                                            stock =
+                                                productStock,
+
+                                            description =
+                                                description
+                                                    .trim(),
+
+                                            image_url =
+                                                imageUrl
+                                        )
+
+                                    repository
+                                        .updateProduct(
+                                            id =
+                                                productId,
+
+                                            product =
+                                                updatedProduct
+                                        )
+
+                                    onUpdated()
+                                } catch (
+                                    exception:
+                                    Exception
+                                ) {
+                                    errorMessage =
+                                        exception
+                                            .message
+                                            ?: "Unable to update product."
+                                } finally {
+                                    isSaving =
+                                        false
                                 }
                             }
                         },
 
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(55.dp),
+                            .height(
+                                55.dp
+                            ),
 
                         shape =
                             RoundedCornerShape(
@@ -585,12 +684,10 @@ fun EditProductScreen(
                                 color =
                                     Color.White,
 
-                                strokeWidth =
-                                    2.dp,
-
                                 modifier =
-                                    Modifier
-                                        .size(22.dp)
+                                    Modifier.size(
+                                        22.dp
+                                    )
                             )
                         } else {
                             Text(

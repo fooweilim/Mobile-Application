@@ -1,22 +1,43 @@
 package com.example.githubdemo.screen.foodbox
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.githubdemo.R
 import com.example.githubdemo.data.FoodBoxData
 import com.example.githubdemo.model.BillingCycle
 import com.example.githubdemo.model.FoodBoxPlan
@@ -28,8 +49,7 @@ fun FoodBoxPlansScreen(
     onViewPlanClick: (String) -> Unit,
     onManageClick: () -> Unit
 ) {
-    val state by
-    foodBoxViewModel.uiState
+    val state by foodBoxViewModel.uiState
 
     Column(
         modifier = Modifier
@@ -39,21 +59,17 @@ fun FoodBoxPlansScreen(
         FoodBoxFlowHeader(
             title = "Food Box Plans",
             currentStep = 1,
-            onManageClick =
-                onManageClick
+            onManageClick = onManageClick
         )
 
         LazyColumn(
-            modifier =
-                Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
 
             contentPadding =
                 PaddingValues(20.dp),
 
             verticalArrangement =
-                Arrangement.spacedBy(
-                    18.dp
-                )
+                Arrangement.spacedBy(18.dp)
         ) {
             item {
                 BillingCycleSelector(
@@ -71,8 +87,7 @@ fun FoodBoxPlansScreen(
                 )
 
                 Text(
-                    text =
-                        "Choose your box",
+                    text = "Choose your box",
 
                     color =
                         FoodBoxMainText,
@@ -85,11 +100,9 @@ fun FoodBoxPlansScreen(
             }
 
             items(
-                items =
-                    FoodBoxData.plans,
+                items = FoodBoxData.plans,
 
-                key = {
-                        plan ->
+                key = { plan ->
                     plan.id
                 }
             ) { plan ->
@@ -124,8 +137,8 @@ private fun BillingCycleSelector(
 
         border =
             BorderStroke(
-                1.dp,
-                FoodBoxBorder
+                width = 1.dp,
+                color = FoodBoxBorder
             ),
 
         colors =
@@ -139,9 +152,7 @@ private fun BillingCycleSelector(
                 Modifier.padding(12.dp),
 
             horizontalArrangement =
-                Arrangement.spacedBy(
-                    10.dp
-                )
+                Arrangement.spacedBy(10.dp)
         ) {
             CycleButton(
                 text = "Monthly",
@@ -213,11 +224,13 @@ private fun CycleButton(
             ),
 
         elevation =
-            ButtonDefaults
-                .buttonElevation(0.dp)
+            ButtonDefaults.buttonElevation(
+                defaultElevation = 0.dp
+            )
     ) {
         Text(
             text = text,
+
             fontWeight =
                 FontWeight.Bold
         )
@@ -230,6 +243,21 @@ private fun PlanCard(
     billingCycle: BillingCycle,
     onClick: () -> Unit
 ) {
+    val imageResId =
+        when (plan.id) {
+            "basic_box" ->
+                R.drawable.food_box_basic
+
+            "family_box" ->
+                R.drawable.food_box_family
+
+            "premium_box" ->
+                R.drawable.food_box_premium
+
+            else ->
+                R.drawable.food_box_basic
+        }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -242,8 +270,8 @@ private fun PlanCard(
 
         border =
             BorderStroke(
-                1.dp,
-                FoodBoxBorder
+                width = 1.dp,
+                color = FoodBoxBorder
             ),
 
         colors =
@@ -253,12 +281,19 @@ private fun PlanCard(
             ),
 
         elevation =
-            CardDefaults
-                .cardElevation(3.dp)
+            CardDefaults.cardElevation(
+                defaultElevation = 3.dp
+            )
     ) {
         Column {
             Box {
-                FoodBoxArtwork(
+                FoodBoxPlanImage(
+                    imageResId =
+                        imageResId,
+
+                    contentDescription =
+                        "${plan.name} image",
+
                     modifier =
                         Modifier.height(170.dp)
                 )
@@ -272,8 +307,12 @@ private fun PlanCard(
                 ) {
                     Text(
                         text = plan.name,
-                        color = Color.White,
+
+                        color =
+                            Color.White,
+
                         fontSize = 26.sp,
+
                         fontWeight =
                             FontWeight.Bold
                     )
@@ -281,7 +320,10 @@ private fun PlanCard(
                     Text(
                         text =
                             plan.description,
-                        color = Color.White,
+
+                        color =
+                            Color.White,
+
                         fontSize = 15.sp
                     )
                 }
@@ -311,11 +353,8 @@ private fun PlanCard(
 
                         modifier =
                             Modifier.padding(
-                                horizontal =
-                                    12.dp,
-
-                                vertical =
-                                    5.dp
+                                horizontal = 12.dp,
+                                vertical = 5.dp
                             ),
 
                         color =
@@ -382,8 +421,10 @@ private fun PlanCard(
 
                 Text(
                     text = "View",
+
                     color =
                         FoodBoxPrimaryGreen,
+
                     fontWeight =
                         FontWeight.Bold
                 )
@@ -394,12 +435,52 @@ private fun PlanCard(
                             .KeyboardArrowRight,
 
                     contentDescription =
-                        null,
+                        "View ${plan.name}",
 
                     tint =
                         FoodBoxPrimaryGreen
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun FoodBoxPlanImage(
+    imageResId: Int,
+    contentDescription: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(170.dp)
+    ) {
+        Image(
+            painter =
+                painterResource(
+                    id = imageResId
+                ),
+
+            contentDescription =
+                contentDescription,
+
+            modifier =
+                Modifier.fillMaxSize(),
+
+            contentScale =
+                ContentScale.Crop
+        )
+
+        // Dark layer makes the white plan name easier to read.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Color.Black.copy(
+                        alpha = 0.28f
+                    )
+                )
+        )
     }
 }
